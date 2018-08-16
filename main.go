@@ -21,7 +21,7 @@ type (
 
 // is l2 in the range of l1 (should we bother checking for interception)
 func (l Line) InRange(l2 Line) bool {
-	return false
+
 }
 
 // point at which two lines intercept
@@ -33,11 +33,12 @@ func (l Line) Intercept(l2 Line) (Point, bool) {
 func (l Line) Intercept(l2 Line) (Point, bool) {
 	return Point{}, false
 }
+
+var one = big.NewFloat(1)
 
 // evaluation function
-func Fn(x big.Float) (y big.Float) {
-	res := 
- return 
+func Fn(x *big.Float) (y *big.Float) {
+	return y.Sqrt(new(big.Float).Sub(one, new(big.Float).Mul(x, x)))
 }
 
 func main() {
