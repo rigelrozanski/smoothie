@@ -9,36 +9,13 @@ import (
 type (
 	NPolygon int64 // sides of the polygon
 	NSide    int64 // which side on a polyon
-
-	Point struct {
-		x, y big.Float
-	}
-
-	Line struct {
-		start, end Point
-	}
 )
-
-// is l2 in the range of l1 (should we bother checking for interception)
-func (l Line) InRange(l2 Line) bool {
-
-}
-
-// point at which two lines intercept
-func (l Line) Intercept(l2 Line) (Point, bool) {
-	return Point{}, false
-}
-
-// point at which two lines intercept
-func (l Line) Intercept(l2 Line) (Point, bool) {
-	return Point{}, false
-}
 
 var one = big.NewFloat(1)
 
 // evaluation function
 func Fn(x *big.Float) (y *big.Float) {
-	return y.Sqrt(new(big.Float).Sub(one, new(big.Float).Mul(x, x)))
+	return y.Sqrt(new(*big.Float).Sub(one, new(*big.Float).Pow(x, 2)))
 }
 
 func main() {
