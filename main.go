@@ -7,12 +7,14 @@ import (
 
 // bounds for the calculation
 var (
-	one       = big.NewFloat(1)
+	one = big.NewFloat(1)
+
+	// bounds for a quarter of the circle
 	XBoundMin = big.NewFloat(0)
 	XBoundMax = one
 )
 
-// evaluation function
+// evaluation function for a circle
 func Fn(x *big.Float) (y *big.Float) {
 	inter1 := new(big.Float).Mul(x, x)
 	inter2 := inter1.Sub(one, inter1)
@@ -81,27 +83,50 @@ func main() {
 		tracingAddon := true // is the superset tracing the addon polygon or the old superset
 
 		for {
+			if (addonSide == maxAddonSides && oldSideN > maxOldSides) ||
+				(oldSideN == maxOldSides && addonSide > maxAddonSides) {
+				break
+			}
+
 			addonSide := addonPolygon[addonSideN]
 			oldSide := supersetPolygon[oldSideN]
 
-			if addonSide.WillIntercept(oldSide) {
+			switch {
+			case addonSide.WillIntercept(oldSide):
 				interceptPt := addonSide.Intercept(oldSide)
-				newSupersetPolygon[newSideN] = getLineSplit(tracingAddon, interceptPt, addonSide, oldSide)
+				line1, line2 := getLineSplit(tracingAddon, interceptPt, addonSide, oldSide)
+				newSupersetPolygon[newSideN] = line1
+				NewSide++
+				newSupersetPolygon[newSideN] = line2
+				NewSide++
 				tracingAddon := !tracingAddon // start tracing the other
-			} else if side.WithinL2YBound {
 
-				newSideN++
-				continue
+			case tracingAddon && addonSide.WithinL2YBound(oldSide):
+
+				newSupersetPolygon[newSideN] = addonSide
+				NewSide++
+				addonSide++
+			case !tracingAddon && oldSide.WithinL2YBound(addonSide):
+
+				newSupersetPolygon[newSideN] = oldSide
+				NewSide++
+				oldSideN++
+			default:
+				panic("wierd!")
 			}
+
 		}
 
 		supersetPolygon = newSupersetPolygon
 	}
+
+	fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
+		lenLines(supersetPolygon), formattedLines(supersetPolygon))
 }
 
-func getLineSplit(tracingAddon bool, intercept Point, addonSide, oldSide Line) Line {
+func getLineSplit(tracingAddon bool, intercept Point, addonSide, oldSide Line) (first, second Line) {
 	if tracingAddon {
-		return NewLine(addonSide.Start, intecept)
+		return NewLine(addonSide.Start, intecept), NewLine(intecept, oldSide.End)
 	}
-	return NewLine(oldSide, intercept)
+	return NewLine(oldSide.Start, intecept), NewLine(intecept, addonSide.End)
 }
