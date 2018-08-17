@@ -5,15 +5,13 @@ import (
 )
 
 // nolint
-const Precision = 2000
+const Precision = 100
 
 var (
 	one = OneDec()
 
 	// nolint
-	N          = 11
-	precCutoff = 100
-	primes     = []int64{3, 4, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}
+	N = 11
 
 	// nolint- bounds for a quarter of the circle
 	XBoundMin = ZeroDec()
@@ -52,42 +50,22 @@ func formattedLines(lines map[int64]Line) string {
 
 func main() {
 
+	primes := []int64{2, 3, 5, 7, 11} //, 13, 17} //, 19, 23, 29, 31, 37, 41, 43, 47} //, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137} //, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}
+
 	//n := int64(N) // starting number of divisions
 	//maxN := 2*n - 1 // maximum number of sides for boring polygons
 
-	boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
+	for mul := 1; true; mul++ {
 
-	// init boring polygons
-	//for i, prime := range primes {
+		fmt.Printf("------------------------------------------------------debug mul: %v\n", mul)
 
-	prime := primes[0]
-	boringPolygons[int64(0)] = make(map[int64]Line)
+		boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
 
-	startPoint := Point{ZeroDec(), OneDec()} // top of the circle
-	width := XBoundMax.Quo(NewDec(prime))    // width of all these pieces
+		// init boring polygons
+		//for i, prime := range primes {
 
-	for side := int64(0); side < prime; side++ {
-		x2 := startPoint.X.Add(width)
-		if x2.GT(XBoundMax) { // precision correction
-			x2 = XBoundMax
-		}
-		y2 := Fn(x2)
-		endPoint := Point{x2, y2}
-		boringPolygons[0][side] = NewLine(startPoint, endPoint)
-		startPoint = endPoint
-	}
-
-	fmt.Printf("line %v, length %v\n", 0, lenLines(boringPolygons[int64(0)]).String())
-	//fmt.Printf("formatted: %v\n", formattedLines(boringPolygons[i]))
-	//}
-
-	// construct the superset polygon
-	supersetPolygon := boringPolygons[0] // start with the smallest
-	for i := 1; i <= len(primes); i++ {
-
-		// create boring polygon
-		prime := primes[i]
-		boringPolygons[int64(i)] = make(map[int64]Line)
+		prime := primes[0]
+		boringPolygons[int64(0)] = make(map[int64]Line)
 
 		startPoint := Point{ZeroDec(), OneDec()} // top of the circle
 		width := XBoundMax.Quo(NewDec(prime))    // width of all these pieces
@@ -99,82 +77,118 @@ func main() {
 			}
 			y2 := Fn(x2)
 			endPoint := Point{x2, y2}
-			boringPolygons[int64(i)][side] = NewLine(startPoint, endPoint)
+			boringPolygons[0][side] = NewLine(startPoint, endPoint)
 			startPoint = endPoint
 		}
 
-		fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[int64(i)]).String())
+		//fmt.Printf("line %v, length %v\n", 0, lenLines(boringPolygons[int64(0)]).String())
+		//fmt.Printf("formatted: %v\n", formattedLines(boringPolygons[i]))
+		//}
 
-		////////////////
+		// construct the superset polygon
+		supersetPolygon := boringPolygons[0] // start with the smallest
+		for i := 1; i < len(primes); i++ {
 
-		// polygon to add to the construction of the superset polygon
-		addonPolygon := boringPolygons[int64(i)]
-		newSupersetPolygon := make(map[int64]Line)
+			// create boring polygon
+			prime := primes[i]
+			boringPolygons[int64(i)] = make(map[int64]Line)
 
-		newSideN, addonSideN, oldSideN := int64(0), int64(0), int64(0) // side counters of the new and old supersetPolygon
-		maxAddonSides, maxOldSides := int64(len(addonPolygon)), int64(len(supersetPolygon))
+			startPoint := Point{ZeroDec(), OneDec()} // top of the circle
+			width := XBoundMax.Quo(NewDec(prime))    // width of all these pieces
 
-		tracingAddon := true // is the superset tracing the addon polygon or the old superset
-		tracing := addonPolygon[addonSideN]
-		comparing := supersetPolygon[oldSideN]
-
-		for {
-			if oldSideN > maxOldSides-1 || addonSideN > maxAddonSides-1 {
-				break
+			for side := int64(0); side < prime; side++ {
+				x2 := startPoint.X.Add(width)
+				if x2.GT(XBoundMax) { // precision correction
+					x2 = XBoundMax
+				}
+				y2 := Fn(x2)
+				endPoint := Point{x2, y2}
+				boringPolygons[int64(i)][side] = NewLine(startPoint, endPoint)
+				startPoint = endPoint
 			}
 
-			var withinBounds bool
-			var interceptPt Point
-			interceptPt, withinBounds = tracing.Intercept(comparing)
+			//fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[int64(i)]).String())
 
-			switch {
-			case withinBounds:
+			////////////////
 
-				newSupersetPolygon[newSideN] = NewLine(tracing.Start, interceptPt)
-				newSideN++
+			// polygon to add to the construction of the superset polygon
+			addonPolygon := boringPolygons[int64(i)]
+			newSupersetPolygon := make(map[int64]Line)
 
-				nextTracing := NewLine(interceptPt, comparing.End)
-				nextComparing := NewLine(interceptPt, tracing.End)
-				tracing = nextTracing
-				comparing = nextComparing
+			newSideN, addonSideN, oldSideN := int64(0), int64(0), int64(0) // side counters of the new and old supersetPolygon
+			maxAddonSides, maxOldSides := int64(len(addonPolygon)), int64(len(supersetPolygon))
 
-				tracingAddon = !tracingAddon // start tracing the other
+			tracingAddon := true // is the superset tracing the addon polygon or the old superset
+			tracing := addonPolygon[addonSideN]
+			comparing := supersetPolygon[oldSideN]
 
-			case tracingAddon:
-				if tracing.WithinL2XBound(comparing) {
-					newSupersetPolygon[newSideN] = tracing
-					newSideN++
-					addonSideN++
-					tracing = addonPolygon[addonSideN]
-				} else if comparing.WithinL2XBound(tracing) {
-					oldSideN++
-					comparing = supersetPolygon[oldSideN]
-				}
-				//comparing = supersetPolygon[oldSideN]
-
-			case !tracingAddon:
-				if tracing.WithinL2XBound(comparing) {
-					newSupersetPolygon[newSideN] = tracing
-					newSideN++
-					oldSideN++
-					tracing = supersetPolygon[oldSideN]
-				} else if comparing.WithinL2XBound(tracing) {
-					addonSideN++
-					comparing = addonPolygon[addonSideN]
+			for {
+				if oldSideN > maxOldSides-1 || addonSideN > maxAddonSides-1 {
+					break
 				}
 
-			default:
-				panic("wierd!")
+				var withinBounds bool
+				var interceptPt Point
+				interceptPt, withinBounds = tracing.Intercept(comparing)
+
+				switch {
+				case withinBounds:
+
+					newSupersetPolygon[newSideN] = NewLine(tracing.Start, interceptPt)
+					newSideN++
+
+					nextTracing := NewLine(interceptPt, comparing.End)
+					nextComparing := NewLine(interceptPt, tracing.End)
+					tracing = nextTracing
+					comparing = nextComparing
+
+					tracingAddon = !tracingAddon // start tracing the other
+
+				case tracingAddon:
+					if tracing.WithinL2XBound(comparing) {
+						newSupersetPolygon[newSideN] = tracing
+						newSideN++
+						addonSideN++
+						tracing = addonPolygon[addonSideN]
+					} else if comparing.WithinL2XBound(tracing) {
+						oldSideN++
+						comparing = supersetPolygon[oldSideN]
+					}
+					//comparing = supersetPolygon[oldSideN]
+
+				case !tracingAddon:
+					if tracing.WithinL2XBound(comparing) {
+						newSupersetPolygon[newSideN] = tracing
+						newSideN++
+						oldSideN++
+						tracing = supersetPolygon[oldSideN]
+					} else if comparing.WithinL2XBound(tracing) {
+						addonSideN++
+						comparing = addonPolygon[addonSideN]
+					}
+
+				default:
+					panic("wierd!")
+				}
+
 			}
 
+			supersetPolygon = newSupersetPolygon
+			//fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
+			//lenLines(supersetPolygon).String())
+			if (lenLines(supersetPolygon)).LT(
+				lenLines(addonPolygon)) {
+				panic("doens't make sense")
+			}
 		}
 
-		supersetPolygon = newSupersetPolygon
-		fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
-			lenLines(supersetPolygon).String())
-	}
+		fmt.Printf("superset polygon, num points %v, length*2 %v\n", len(supersetPolygon),
+			(NewDec(2).Mul(lenLines(supersetPolygon))).String())
 
-	fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
-		lenLines(supersetPolygon).String())
-	//fmt.Printf("formatted: %v\n", formattedLines(supersetPolygon))
+		// multiple the primes by the multiplication factor
+		for i, prime := range primes {
+			primes[i] = prime * 2
+		}
+		//fmt.Printf("formatted: %v\n", formattedLines(supersetPolygon))
+	}
 }

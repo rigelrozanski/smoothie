@@ -39,9 +39,14 @@ var zero = ZeroDec()
 
 // point at which two lines intercept
 func (l Line) Intercept(l2 Line) (intercept Point, withinBounds bool) {
+
+	// if start from the same intercept they cannot be intercepting going forward
+	if l.Start.X.Equal(l2.Start.X) && l.Start.Y.Equal(l2.Start.Y) {
+		return intercept, false
+	}
+
 	//  y  = (b2 m1 - b1 m2)/(m1 - m2)
 	inter1 := l2.B.Mul(l.M)
-
 	inter2 := l.B.Mul(l2.M)
 	inter3 := inter1.Sub(inter2)
 	inter4 := l.M.Sub(l2.M)
@@ -51,12 +56,6 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds bool) {
 	y := inter3.Quo(inter4)
 	x := (y.Sub(l.B)).Quo(l.M)
 	intercept = Point{x, y}
-
-	// check if intercept is in precision error amount
-	proximityToZero := l.Start.X.Sub(intercept.X).Abs()
-	if proximityToZero.LT(NewDecWithPrec(1, int64(precCutoff))) {
-		return intercept, false
-	}
 
 	withinBounds = false
 	// to deal with precision errors,
