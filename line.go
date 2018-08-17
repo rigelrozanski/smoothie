@@ -79,7 +79,7 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds bool) {
 
 	// check if intercept is in precision error amount
 	proximityToZero := newFloat().Abs(newFloat().Sub(l.Start.X, intercept.X))
-	if proximityToZero.Cmp(big.NewFloat(1e-60)) < 0 {
+	if proximityToZero.Cmp(big.NewFloat(1e-50)) < 0 {
 		return intercept, false
 	}
 

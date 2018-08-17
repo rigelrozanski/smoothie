@@ -60,7 +60,7 @@ func main() {
 	fmt.Println("wackydebugoutput main 0")
 
 	var n int64 = 3  // starting number of divisions
-	maxN := int64(4) //2*n - 1 // maximum number of sides for boring polygons
+	maxN := int64(5) //2*n - 1 // maximum number of sides for boring polygons
 
 	boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
 
@@ -107,6 +107,7 @@ func main() {
 		fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
 			lenLines(supersetPolygon), formattedLines(supersetPolygon))
 
+		fmt.Printf("-----------------------------------------------------------------------------------------\n")
 		for {
 			fmt.Printf("----------------------------\n")
 			fmt.Printf("debug oldSideN: %v\n", oldSideN)
@@ -127,26 +128,13 @@ func main() {
 			switch {
 			case withinBounds:
 
-				var newLine1 Line
-				if tracingAddon {
-					newLine1 = NewLine(tracing.Start, interceptPt)
-					nextTracing := NewLine(interceptPt, comparing.End)
-					nextComparing := NewLine(interceptPt, tracing.End)
-					tracing = nextTracing
-					comparing = nextComparing
-					//comparing = addonPolygon[addonSideN]
-
-				} else {
-					newLine1 = NewLine(tracing.Start, interceptPt)
-					nextTracing := NewLine(interceptPt, comparing.End)
-					nextComparing := NewLine(interceptPt, tracing.End)
-					tracing = nextTracing
-					comparing = nextComparing
-					//comparing = supersetPolygon[oldSideN]
-				}
-
-				newSupersetPolygon[newSideN] = newLine1
+				newSupersetPolygon[newSideN] = NewLine(tracing.Start, interceptPt)
 				newSideN++
+
+				nextTracing := NewLine(interceptPt, comparing.End)
+				nextComparing := NewLine(interceptPt, tracing.End)
+				tracing = nextTracing
+				comparing = nextComparing
 
 				tracingAddon = !tracingAddon // start tracing the other
 
@@ -154,19 +142,24 @@ func main() {
 				if tracing.WithinL2XBound(comparing) {
 					newSupersetPolygon[newSideN] = tracing
 					newSideN++
+					addonSideN++
+					tracing = addonPolygon[addonSideN]
+				} else if comparing.WithinL2XBound(tracing) {
+					oldSideN++
+					comparing = supersetPolygon[oldSideN]
 				}
-				addonSideN++
-				tracing = addonPolygon[addonSideN]
-				comparing = supersetPolygon[oldSideN]
+				//comparing = supersetPolygon[oldSideN]
 
 			case !tracingAddon:
 				if tracing.WithinL2XBound(comparing) {
 					newSupersetPolygon[newSideN] = tracing
 					newSideN++
+					oldSideN++
+					tracing = supersetPolygon[oldSideN]
+				} else if comparing.WithinL2XBound(tracing) {
+					addonSideN++
+					comparing = addonPolygon[addonSideN]
 				}
-				oldSideN++
-				tracing = supersetPolygon[oldSideN]
-				comparing = addonPolygon[addonSideN]
 
 			default:
 				panic("wierd!")
