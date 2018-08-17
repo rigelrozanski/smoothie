@@ -2,47 +2,38 @@ package main
 
 import (
 	"fmt"
-	"math/big"
 )
 
-var (
-	one = big.NewFloat(1)
+// nolint
+const Precision = 5000
 
-	precCutoff = 1e-60
-	prec       = uint(700)
+var (
+	one = OneDec()
+
+	// nolint
+	N          = 11
+	precCutoff = 60
+	primes     = []int64{3, 4, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}
 
 	// nolint- bounds for a quarter of the circle
-	XBoundMin = big.NewFloat(0)
+	XBoundMin = ZeroDec()
 	XBoundMax = one
 )
 
 // evaluation function for a circle
-func Fn(x *big.Float) (y *big.Float) {
-	inter1 := new(big.Float).Mul(x, x)
-	inter2 := inter1.Sub(one, inter1)
-	inter3 := inter2.Sqrt(inter2)
+func Fn(x Dec) (y Dec) {
+	inter1 := x.Mul(x)
+	inter2 := one.Sub(inter1)
+	inter3 := inter2.Sqrt()
 	return inter3
 }
 
 //____________________________________
 
-func initFloat(f *big.Float) {
-	f.SetPrec(prec)
-	f.SetMode(big.ToNearestEven)
-}
-
-func newFloat() *big.Float {
-	f := new(big.Float)
-	initFloat(f)
-	return f
-}
-
-//____________________________________
-
-func lenLines(lines map[int64]Line) *big.Float {
-	totalLen := big.NewFloat(0)
+func lenLines(lines map[int64]Line) Dec {
+	totalLen := ZeroDec()
 	for _, line := range lines {
-		totalLen = totalLen.Add(totalLen, line.Length())
+		totalLen = totalLen.Add(line.Length())
 	}
 	return totalLen
 }
@@ -53,7 +44,7 @@ func formattedLines(lines map[int64]Line) string {
 
 	for i := int64(0); i < int64(len(lines)); i++ {
 		line := lines[i]
-		out += fmt.Sprintf(",{%v, %v}", line.End.X, line.End.Y)
+		out += fmt.Sprintf(",{%v, %v}", line.End.X.String(), line.End.Y.String())
 	}
 	out += "}"
 	return out
@@ -61,24 +52,22 @@ func formattedLines(lines map[int64]Line) string {
 
 func main() {
 
-	var n int64 = 9 // starting number of divisions
+	n := int64(N)   // starting number of divisions
 	maxN := 2*n - 1 // maximum number of sides for boring polygons
 
 	boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
 
 	// init boring polygons
 	for i := n; i <= maxN; i++ {
+		val := primes[i]
 		boringPolygons[i] = make(map[int64]Line)
 
-		startPoint := Point{big.NewFloat(0), big.NewFloat(1)} // top of the circle
-		initFloat(startPoint.X)
-		initFloat(startPoint.Y)
-		width := newFloat().Quo(XBoundMax, big.NewFloat(float64(i))) // width of all these pieces
-		initFloat(width)
+		startPoint := Point{ZeroDec(), OneDec()} // top of the circle
+		width := XBoundMax.Quo(NewDec(i))        // width of all these pieces
 
 		for side := int64(0); side < i; side++ {
-			x2 := newFloat().Add(startPoint.X, width)
-			if x2.Cmp(XBoundMax) > 0 { // precision correction
+			x2 := startPoint.X.Add(width)
+			if x2.GT(XBoundMax) { // precision correction
 				x2 = XBoundMax
 			}
 			y2 := Fn(x2)
@@ -87,7 +76,7 @@ func main() {
 			startPoint = endPoint
 		}
 
-		fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[i]))
+		fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[i]).String())
 		//fmt.Printf("formatted: %v\n", formattedLines(boringPolygons[i]))
 	}
 
@@ -106,14 +95,7 @@ func main() {
 		tracing := addonPolygon[addonSideN]
 		comparing := supersetPolygon[oldSideN]
 
-		//fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
-		//lenLines(supersetPolygon), formattedLines(supersetPolygon))
-		//fmt.Printf("formatted: %v\n", formattedLines(supersetPolygon))
-
 		for {
-			//fmt.Printf("----------------------------\n")
-			//fmt.Printf("debug oldSideN: %v\n", oldSideN)
-			//fmt.Printf("debug addonSideN: %v\n", addonSideN)
 			if oldSideN > maxOldSides-1 || addonSideN > maxAddonSides-1 {
 				break
 			}
@@ -122,11 +104,6 @@ func main() {
 			var interceptPt Point
 			interceptPt, withinBounds = tracing.Intercept(comparing)
 
-			//fmt.Printf("debug interceptPt: %v\n", interceptPt)
-			//fmt.Printf("debug withinBounds: %v\n", withinBounds)
-			//fmt.Printf("debug tracingAddon: %v\n", tracingAddon)
-			//fmt.Printf("debug tracing: %v\n", tracing)
-			//fmt.Printf("debug comparing: %v\n", comparing)
 			switch {
 			case withinBounds:
 
@@ -173,6 +150,6 @@ func main() {
 	}
 
 	fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
-		lenLines(supersetPolygon))
+		lenLines(supersetPolygon).String())
 	//fmt.Printf("formatted: %v\n", formattedLines(supersetPolygon))
 }
