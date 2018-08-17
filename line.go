@@ -67,6 +67,11 @@ func (l Line) WillIntercept(l2 Line) bool {
 	return false
 }
 
+// y-axis end of line l is within end of l2
+func (l Line) WithinL2YBound(l2 Line) bool {
+	return l.End.Y.Cmp(l2.End.Y) <= 0
+}
+
 // point at which two lines intercept
 func (l Line) Intercept(l2 Line) Point {
 	//  y  = (b2 m1 - b1 m2)/(m1 - m2)
