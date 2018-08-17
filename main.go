@@ -8,6 +8,9 @@ import (
 var (
 	one = big.NewFloat(1)
 
+	precCutoff = 1e-60
+	prec       = uint(700)
+
 	// nolint- bounds for a quarter of the circle
 	XBoundMin = big.NewFloat(0)
 	XBoundMax = one
@@ -24,7 +27,7 @@ func Fn(x *big.Float) (y *big.Float) {
 //____________________________________
 
 func initFloat(f *big.Float) {
-	f.SetPrec(200)
+	f.SetPrec(prec)
 	f.SetMode(big.ToNearestEven)
 }
 
@@ -57,10 +60,9 @@ func formattedLines(lines map[int64]Line) string {
 }
 
 func main() {
-	fmt.Println("wackydebugoutput main 0")
 
-	var n int64 = 3  // starting number of divisions
-	maxN := int64(5) //2*n - 1 // maximum number of sides for boring polygons
+	var n int64 = 9 // starting number of divisions
+	maxN := 2*n - 1 // maximum number of sides for boring polygons
 
 	boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
 
@@ -85,8 +87,8 @@ func main() {
 			startPoint = endPoint
 		}
 
-		fmt.Printf("line %v, length %v\nformatted: %v\n", i,
-			lenLines(boringPolygons[i]), formattedLines(boringPolygons[i]))
+		fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[i]))
+		//fmt.Printf("formatted: %v\n", formattedLines(boringPolygons[i]))
 	}
 
 	// construct the superset polygon
@@ -104,14 +106,14 @@ func main() {
 		tracing := addonPolygon[addonSideN]
 		comparing := supersetPolygon[oldSideN]
 
-		fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
-			lenLines(supersetPolygon), formattedLines(supersetPolygon))
+		//fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
+		//lenLines(supersetPolygon), formattedLines(supersetPolygon))
+		//fmt.Printf("formatted: %v\n", formattedLines(supersetPolygon))
 
-		fmt.Printf("-----------------------------------------------------------------------------------------\n")
 		for {
-			fmt.Printf("----------------------------\n")
-			fmt.Printf("debug oldSideN: %v\n", oldSideN)
-			fmt.Printf("debug addonSideN: %v\n", addonSideN)
+			//fmt.Printf("----------------------------\n")
+			//fmt.Printf("debug oldSideN: %v\n", oldSideN)
+			//fmt.Printf("debug addonSideN: %v\n", addonSideN)
 			if oldSideN > maxOldSides-1 || addonSideN > maxAddonSides-1 {
 				break
 			}
@@ -120,11 +122,11 @@ func main() {
 			var interceptPt Point
 			interceptPt, withinBounds = tracing.Intercept(comparing)
 
-			fmt.Printf("debug interceptPt: %v\n", interceptPt)
-			fmt.Printf("debug withinBounds: %v\n", withinBounds)
-			fmt.Printf("debug tracingAddon: %v\n", tracingAddon)
-			fmt.Printf("debug tracing: %v\n", tracing)
-			fmt.Printf("debug comparing: %v\n", comparing)
+			//fmt.Printf("debug interceptPt: %v\n", interceptPt)
+			//fmt.Printf("debug withinBounds: %v\n", withinBounds)
+			//fmt.Printf("debug tracingAddon: %v\n", tracingAddon)
+			//fmt.Printf("debug tracing: %v\n", tracing)
+			//fmt.Printf("debug comparing: %v\n", comparing)
 			switch {
 			case withinBounds:
 
@@ -170,6 +172,7 @@ func main() {
 		supersetPolygon = newSupersetPolygon
 	}
 
-	fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
-		lenLines(supersetPolygon), formattedLines(supersetPolygon))
+	fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
+		lenLines(supersetPolygon))
+	//fmt.Printf("formatted: %v\n", formattedLines(supersetPolygon))
 }

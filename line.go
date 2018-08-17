@@ -66,6 +66,8 @@ func (l Line) WithinL2XBound(l2 Line) bool {
 	return l.End.X.Cmp(l2.End.X) <= 0
 }
 
+var zero = big.NewFloat(0)
+
 // point at which two lines intercept
 func (l Line) Intercept(l2 Line) (intercept Point, withinBounds bool) {
 	//  y  = (b2 m1 - b1 m2)/(m1 - m2)
@@ -73,13 +75,17 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds bool) {
 
 	inter2 := newFloat().Mul(l.B, l2.M)
 	inter3 := newFloat().Sub(inter1, inter2)
-	y := newFloat().Quo(inter3, newFloat().Sub(l.M, l2.M))
+	inter4 := newFloat().Sub(l.M, l2.M)
+	if inter4.Cmp(zero) == 0 {
+		return intercept, false
+	}
+	y := newFloat().Quo(inter3, inter4)
 	x := newFloat().Quo(newFloat().Sub(y, l.B), l.M)
 	intercept = Point{x, y}
 
 	// check if intercept is in precision error amount
 	proximityToZero := newFloat().Abs(newFloat().Sub(l.Start.X, intercept.X))
-	if proximityToZero.Cmp(big.NewFloat(1e-50)) < 0 {
+	if proximityToZero.Cmp(big.NewFloat(precCutoff)) < 0 {
 		return intercept, false
 	}
 
