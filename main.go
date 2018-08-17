@@ -5,14 +5,14 @@ import (
 )
 
 // nolint
-const Precision = 5000
+const Precision = 2000
 
 var (
 	one = OneDec()
 
 	// nolint
 	N          = 11
-	precCutoff = 60
+	precCutoff = 100
 	primes     = []int64{3, 4, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}
 
 	// nolint- bounds for a quarter of the circle
@@ -52,40 +52,63 @@ func formattedLines(lines map[int64]Line) string {
 
 func main() {
 
-	n := int64(N)   // starting number of divisions
-	maxN := 2*n - 1 // maximum number of sides for boring polygons
+	//n := int64(N) // starting number of divisions
+	//maxN := 2*n - 1 // maximum number of sides for boring polygons
 
 	boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
 
 	// init boring polygons
-	for i := n; i <= maxN; i++ {
-		val := primes[i]
-		boringPolygons[i] = make(map[int64]Line)
+	//for i, prime := range primes {
+
+	prime := primes[0]
+	boringPolygons[int64(0)] = make(map[int64]Line)
+
+	startPoint := Point{ZeroDec(), OneDec()} // top of the circle
+	width := XBoundMax.Quo(NewDec(prime))    // width of all these pieces
+
+	for side := int64(0); side < prime; side++ {
+		x2 := startPoint.X.Add(width)
+		if x2.GT(XBoundMax) { // precision correction
+			x2 = XBoundMax
+		}
+		y2 := Fn(x2)
+		endPoint := Point{x2, y2}
+		boringPolygons[0][side] = NewLine(startPoint, endPoint)
+		startPoint = endPoint
+	}
+
+	fmt.Printf("line %v, length %v\n", 0, lenLines(boringPolygons[int64(0)]).String())
+	//fmt.Printf("formatted: %v\n", formattedLines(boringPolygons[i]))
+	//}
+
+	// construct the superset polygon
+	supersetPolygon := boringPolygons[0] // start with the smallest
+	for i := 1; i <= len(primes); i++ {
+
+		// create boring polygon
+		prime := primes[i]
+		boringPolygons[int64(i)] = make(map[int64]Line)
 
 		startPoint := Point{ZeroDec(), OneDec()} // top of the circle
-		width := XBoundMax.Quo(NewDec(i))        // width of all these pieces
+		width := XBoundMax.Quo(NewDec(prime))    // width of all these pieces
 
-		for side := int64(0); side < i; side++ {
+		for side := int64(0); side < prime; side++ {
 			x2 := startPoint.X.Add(width)
 			if x2.GT(XBoundMax) { // precision correction
 				x2 = XBoundMax
 			}
 			y2 := Fn(x2)
 			endPoint := Point{x2, y2}
-			boringPolygons[i][side] = NewLine(startPoint, endPoint)
+			boringPolygons[int64(i)][side] = NewLine(startPoint, endPoint)
 			startPoint = endPoint
 		}
 
-		fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[i]).String())
-		//fmt.Printf("formatted: %v\n", formattedLines(boringPolygons[i]))
-	}
+		fmt.Printf("line %v, length %v\n", i, lenLines(boringPolygons[int64(i)]).String())
 
-	// construct the superset polygon
-	supersetPolygon := boringPolygons[n] // start with the smallest
-	for i := n + 1; i <= maxN; i++ {
+		////////////////
 
 		// polygon to add to the construction of the superset polygon
-		addonPolygon := boringPolygons[i]
+		addonPolygon := boringPolygons[int64(i)]
 		newSupersetPolygon := make(map[int64]Line)
 
 		newSideN, addonSideN, oldSideN := int64(0), int64(0), int64(0) // side counters of the new and old supersetPolygon
@@ -147,6 +170,8 @@ func main() {
 		}
 
 		supersetPolygon = newSupersetPolygon
+		fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
+			lenLines(supersetPolygon).String())
 	}
 
 	fmt.Printf("superset polygon, num points %v, length %v\n", len(supersetPolygon),
