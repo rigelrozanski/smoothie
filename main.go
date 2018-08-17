@@ -33,7 +33,9 @@ func lenLines(lines map[int64]Line) *big.Float {
 func formattedLines(lines map[int64]Line) string {
 	out := "{"
 	out += fmt.Sprintf("{%v, %v}", lines[0].Start.X, lines[0].Start.Y)
-	for _, line := range lines {
+
+	for i := int64(0); i < int64(len(lines)); i++ {
+		line := lines[i]
 		out += fmt.Sprintf(",{%v, %v}", line.End.X, line.End.Y)
 	}
 	out += "}"
@@ -42,8 +44,8 @@ func formattedLines(lines map[int64]Line) string {
 
 func main() {
 
-	var n int64 = 3 // starting number of divisions
-	maxN := 2*n - 1 // maximum number of sides for boring polygons
+	var n int64 = 3  // starting number of divisions
+	maxN := int64(4) //2*n - 1 // maximum number of sides for boring polygons
 
 	boringPolygons := make(map[int64]map[int64]Line) // index 1: number of lines in element, index 2: element line no.
 
@@ -91,25 +93,47 @@ func main() {
 			addonSide := addonPolygon[addonSideN]
 			oldSide := supersetPolygon[oldSideN]
 
+			fmt.Printf("debug newSideN %v, addonSideN %v, oldSideN %v\n", newSideN, addonSideN, oldSideN)
+			fmt.Printf("debug addonSide: %v\n", addonSide)
+			fmt.Printf("debug oldSide: %v\n", oldSide)
+			//fmt.Printf("debug WithinL2YBound: %v\n", addonSide.WithinL2XBound(oldSide))
+
+			interceptPt, withinBounds := addonSide.Intercept(oldSide)
+			fmt.Printf("debug interceptPt: %v\n", interceptPt)
 			switch {
-			case addonSide.WillIntercept(oldSide):
-				interceptPt := addonSide.Intercept(oldSide)
-				line1, line2 := getLineSplit(tracingAddon, interceptPt, addonSide, oldSide)
-				newSupersetPolygon[newSideN] = line1
+			case withinBounds:
+				fmt.Printf("debug withinBounds: %v\n", withinBounds)
+
+				var newLine1, newLine2 Line
+				if tracingAddon {
+					newLine1 = NewLine(addonSide.Start, interceptPt)
+					newLine2 = NewLine(interceptPt, oldSide.End)
+					oldSideN++
+				} else {
+					newLine1 = NewLine(oldSide.Start, interceptPt)
+					newLine2 = NewLine(interceptPt, addonSide.End)
+					addonSideN++
+				}
+				fmt.Printf("debug tracingAddon: %v\n", tracingAddon)
+				fmt.Printf("debug newLine1: %v\n", newLine1)
+				newSupersetPolygon[newSideN] = newLine1
 				newSideN++
-				newSupersetPolygon[newSideN] = line2
+				newSupersetPolygon[newSideN] = newLine2
 				newSideN++
+
 				tracingAddon = !tracingAddon // start tracing the other
 
-			case tracingAddon && addonSide.WithinL2YBound(oldSide):
-
-				newSupersetPolygon[newSideN] = addonSide
-				newSideN++
+			case tracingAddon:
+				if addonSide.WithinL2XBound(oldSide) {
+					newSupersetPolygon[newSideN] = addonSide
+					newSideN++
+				}
 				addonSideN++
-			case !tracingAddon && oldSide.WithinL2YBound(addonSide):
-
-				newSupersetPolygon[newSideN] = oldSide
-				newSideN++
+			case !tracingAddon:
+				if oldSide.WithinL2XBound(addonSide) {
+					newSupersetPolygon[newSideN] = oldSide
+					newSideN++
+				}
 				oldSideN++
 			default:
 				panic("wierd!")
@@ -122,11 +146,4 @@ func main() {
 
 	fmt.Printf("superset polygon, num points %v, length %v\nformatted: %v\n", len(supersetPolygon),
 		lenLines(supersetPolygon), formattedLines(supersetPolygon))
-}
-
-func getLineSplit(tracingAddon bool, intercept Point, addonSide, oldSide Line) (first, second Line) {
-	if tracingAddon {
-		return NewLine(addonSide.Start, intercept), NewLine(intercept, oldSide.End)
-	}
-	return NewLine(oldSide.Start, intercept), NewLine(intercept, addonSide.End)
 }
