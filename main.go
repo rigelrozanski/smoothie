@@ -75,16 +75,16 @@ func main() {
 
 		// polygon to add to the construction of the superset polygon
 		addonPolygon := boringPolygons[i]
-		newSupersetPolygon = make(map[int64]Line)
+		newSupersetPolygon := make(map[int64]Line)
 
-		newSideN, addonSideN, oldSideN := 0, 0, 0 // side counters of the new and old supersetPolygon
-		maxAddonSides, maxOldSides := len(addonPolygon), len(maxOldSides)
+		newSideN, addonSideN, oldSideN := int64(0), int64(0), int64(0) // side counters of the new and old supersetPolygon
+		maxAddonSides, maxOldSides := int64(len(addonPolygon)), int64(len(supersetPolygon))
 
 		tracingAddon := true // is the superset tracing the addon polygon or the old superset
 
 		for {
-			if (addonSide == maxAddonSides && oldSideN > maxOldSides) ||
-				(oldSideN == maxOldSides && addonSide > maxAddonSides) {
+			if (addonSideN == maxAddonSides-1 && oldSideN > maxOldSides-1) ||
+				(oldSideN == maxOldSides-1 && addonSideN > maxAddonSides-1) {
 				break
 			}
 
@@ -96,20 +96,20 @@ func main() {
 				interceptPt := addonSide.Intercept(oldSide)
 				line1, line2 := getLineSplit(tracingAddon, interceptPt, addonSide, oldSide)
 				newSupersetPolygon[newSideN] = line1
-				NewSide++
+				newSideN++
 				newSupersetPolygon[newSideN] = line2
-				NewSide++
-				tracingAddon := !tracingAddon // start tracing the other
+				newSideN++
+				tracingAddon = !tracingAddon // start tracing the other
 
 			case tracingAddon && addonSide.WithinL2YBound(oldSide):
 
 				newSupersetPolygon[newSideN] = addonSide
-				NewSide++
-				addonSide++
+				newSideN++
+				addonSideN++
 			case !tracingAddon && oldSide.WithinL2YBound(addonSide):
 
 				newSupersetPolygon[newSideN] = oldSide
-				NewSide++
+				newSideN++
 				oldSideN++
 			default:
 				panic("wierd!")
@@ -126,7 +126,7 @@ func main() {
 
 func getLineSplit(tracingAddon bool, intercept Point, addonSide, oldSide Line) (first, second Line) {
 	if tracingAddon {
-		return NewLine(addonSide.Start, intecept), NewLine(intecept, oldSide.End)
+		return NewLine(addonSide.Start, intercept), NewLine(intercept, oldSide.End)
 	}
-	return NewLine(oldSide.Start, intecept), NewLine(intecept, addonSide.End)
+	return NewLine(oldSide.Start, intercept), NewLine(intercept, addonSide.End)
 }
