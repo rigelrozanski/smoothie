@@ -5,12 +5,12 @@ import (
 )
 
 // nolint
-const Precision = 20
+const Precision = 15
 
 // evaluation function for a circle
 func Fn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
-	inter2 := NewDec(1).Sub(inter1)
+	inter2 := OneDec().Sub(inter1)
 	inter3 := inter2.Sqrt()
 	return inter3
 }
@@ -42,12 +42,12 @@ func regularDivision(divisions int64, XBoundMax Dec) map[int64]Line {
 	// create boring polygon
 	regularDivision := make(map[int64]Line)
 
-	startPoint := Point{NewDec(0), NewDec(1)} // top of the circle
+	startPoint := Point{ZeroDec(), OneDec()}  // top of the circle
 	width := XBoundMax.Quo(NewDec(divisions)) // width of all these pieces
 
 	for side := int64(0); side < divisions; side++ {
 		x2 := startPoint.X.Add(width)
-		if x2.GT(XBoundMax) { // precision correction
+		if x2.GT(XBoundMax) || (XBoundMax.Sub(x2)).LT(precErr) { // precision correction
 			x2 = XBoundMax
 		}
 		y2 := Fn(x2)
@@ -61,12 +61,13 @@ func regularDivision(divisions int64, XBoundMax Dec) map[int64]Line {
 func main() {
 
 	// nolint- bounds for a quarter of the circle
-	XBoundMax := NewDec(1)
+	XBoundMax := OneDec()
 
 	// starting superset
-	supersetPolygon := regularDivision(3, XBoundMax)
+	startDivision := int64(3)
+	supersetPolygon := regularDivision(startDivision, XBoundMax)
 
-	for divisions := int64(4); true; divisions++ {
+	for divisions := startDivision + 1; true; divisions++ {
 
 		// polygon to add to the construction of the superset polygon
 		subsetPolygon := regularDivision(divisions, XBoundMax)
@@ -79,17 +80,31 @@ func main() {
 		tracing := subsetPolygon[subsetSideN]
 		comparing := supersetPolygon[oldSideN]
 
+		justIntercepted := false
+
 		for {
 			if oldSideN > maxOldSides-1 || subsetSideN > maxSubsetSides-1 {
 				break
 			}
 
-			var withinBounds bool
-			var interceptPt Point
-			interceptPt, withinBounds = tracing.Intercept(comparing)
+			interceptPt, withinBounds, sameStartingPt := tracing.Intercept(comparing)
+			//fmt.Printf("debug interceptPt: %v withinBounds %v, samestart %v\n", interceptPt, withinBounds, sameStartingPt)
+
+			doInterceptSwitch := false
+			if withinBounds && !sameStartingPt {
+				doInterceptSwitch = true
+			} else if sameStartingPt && !tracingSubset && !justIntercepted { /////////////////////////////////////////// XXX but not nessisarily!
+
+				// pull the ol' switcharoo
+				nextTracing := comparing
+				nextComparing := tracing
+				tracing = nextTracing
+				comparing = nextComparing
+				tracingSubset = !tracingSubset
+			} // otherwise continue on the subset!
 
 			switch {
-			case withinBounds:
+			case doInterceptSwitch:
 
 				newSupersetPolygon[newSideN] = NewLine(tracing.Start, interceptPt)
 				newSideN++
@@ -101,6 +116,8 @@ func main() {
 
 				tracingSubset = !tracingSubset // start tracing the other
 
+				justIntercepted = true
+
 			case tracingSubset:
 				if tracing.WithinL2XBound(comparing) {
 					newSupersetPolygon[newSideN] = tracing
@@ -111,7 +128,7 @@ func main() {
 					oldSideN++
 					comparing = supersetPolygon[oldSideN]
 				}
-				//comparing = supersetPolygon[oldSideN]
+				justIntercepted = false
 
 			case !tracingSubset:
 				if tracing.WithinL2XBound(comparing) {
@@ -123,6 +140,7 @@ func main() {
 					subsetSideN++
 					comparing = subsetPolygon[subsetSideN]
 				}
+				justIntercepted = false
 
 			default:
 				panic("wierd!")
@@ -140,12 +158,12 @@ func main() {
 
 		// sanity
 		if (supersetLength).LT(subsetLength) {
-			msg := fmt.Sprintf("subset > superset length!\n subset:\n%v\nold superset:\n%v\nsuperset:\n%v\n",
+			msg := fmt.Sprintf("subset > superset length!\n\nsubset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
 				formattedLines(subsetPolygon), formattedLines(supersetPolygon), formattedLines(newSupersetPolygon))
 			panic(msg)
 		}
 		if (supersetLength).LT(oldSupersetLength) {
-			msg := fmt.Sprintf("old superset > superset length!\n subset:\n%v\nold superset:\n%v\nsuperset:\n%v\n",
+			msg := fmt.Sprintf("old superset > superset length!\n\nsubset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
 				formattedLines(subsetPolygon), formattedLines(supersetPolygon), formattedLines(newSupersetPolygon))
 			panic(msg)
 		}
