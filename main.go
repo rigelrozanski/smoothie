@@ -5,23 +5,12 @@ import (
 )
 
 // nolint
-const Precision = 100
-
-var (
-	one = OneDec()
-
-	// nolint
-	N = 11
-
-	// nolint- bounds for a quarter of the circle
-	XBoundMin = ZeroDec()
-	XBoundMax = one
-)
+const Precision = 20
 
 // evaluation function for a circle
 func Fn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
-	inter2 := one.Sub(inter1)
+	inter2 := NewDec(1).Sub(inter1)
 	inter3 := inter2.Sqrt()
 	return inter3
 }
@@ -48,12 +37,12 @@ func formattedLines(lines map[int64]Line) string {
 	return out
 }
 
-func regularDivision(divisions int64) map[int64]Line {
+func regularDivision(divisions int64, XBoundMax Dec) map[int64]Line {
 
 	// create boring polygon
-	regularDivision = make(map[int64]Line)
+	regularDivision := make(map[int64]Line)
 
-	startPoint := Point{ZeroDec(), OneDec()}  // top of the circle
+	startPoint := Point{NewDec(0), NewDec(1)} // top of the circle
 	width := XBoundMax.Quo(NewDec(divisions)) // width of all these pieces
 
 	for side := int64(0); side < divisions; side++ {
@@ -63,7 +52,7 @@ func regularDivision(divisions int64) map[int64]Line {
 		}
 		y2 := Fn(x2)
 		endPoint := Point{x2, y2}
-		boringPolygon[side] = NewLine(startPoint, endPoint)
+		regularDivision[side] = NewLine(startPoint, endPoint)
 		startPoint = endPoint
 	}
 	return regularDivision
@@ -71,13 +60,16 @@ func regularDivision(divisions int64) map[int64]Line {
 
 func main() {
 
-	// starting superset
-	supersetPolygon := regularDivision(3)
+	// nolint- bounds for a quarter of the circle
+	XBoundMax := NewDec(1)
 
-	for divisions := 4; i < len(primes); divisions++ {
+	// starting superset
+	supersetPolygon := regularDivision(3, XBoundMax)
+
+	for divisions := int64(4); true; divisions++ {
 
 		// polygon to add to the construction of the superset polygon
-		subsetPolygon := regularDivision(divisions)
+		subsetPolygon := regularDivision(divisions, XBoundMax)
 		newSupersetPolygon := make(map[int64]Line)
 
 		newSideN, subsetSideN, oldSideN := int64(0), int64(0), int64(0) // side counters of the new and old supersetPolygon
@@ -138,13 +130,23 @@ func main() {
 
 		}
 
+		oldSupersetLength := lenLines(newSupersetPolygon)
 		supersetLength := lenLines(newSupersetPolygon)
 		subsetLength := lenLines(subsetPolygon)
-		fmt.Printf("Subset: %v, len %v\n Superset: # points %v, length %v\n",
+		output := "---------------------------------------------------------------\n"
+		output += fmt.Sprintf("Subset: %v\t\t\tlength %v\nSuperset\t# points %v,\tlength %v\n",
 			divisions, subsetLength.String(), len(newSupersetPolygon), supersetLength.String())
+		fmt.Println(output)
 
-		if (lengthSuperSet).LT(subsetLength) {
-			msg := fmt.Sprintf("subset > superset length!\n subset")
+		// sanity
+		if (supersetLength).LT(subsetLength) {
+			msg := fmt.Sprintf("subset > superset length!\n subset:\n%v\nold superset:\n%v\nsuperset:\n%v\n",
+				formattedLines(subsetPolygon), formattedLines(supersetPolygon), formattedLines(newSupersetPolygon))
+			panic(msg)
+		}
+		if (supersetLength).LT(oldSupersetLength) {
+			msg := fmt.Sprintf("old superset > superset length!\n subset:\n%v\nold superset:\n%v\nsuperset:\n%v\n",
+				formattedLines(subsetPolygon), formattedLines(supersetPolygon), formattedLines(newSupersetPolygon))
 			panic(msg)
 		}
 
