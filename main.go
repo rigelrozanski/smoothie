@@ -5,7 +5,7 @@ import (
 )
 
 // nolint
-const Precision = 15
+const Precision = 10
 
 // evaluation function for a circle
 func Fn(x Dec) (y Dec) {
@@ -145,6 +145,12 @@ func main() {
 			default:
 				panic("wierd!")
 			}
+		}
+
+		if !(newSupersetPolygon[int64(len(newSupersetPolygon)-1)].End.X).Equal(OneDec()) {
+			msg := fmt.Sprintf("doesn't end at {1,0} !\n\nsubset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
+				formattedLines(subsetPolygon), formattedLines(supersetPolygon), formattedLines(newSupersetPolygon))
+			panic(msg)
 
 		}
 
