@@ -39,7 +39,7 @@ var zero = ZeroDec()
 var precErr Dec
 
 func init() {
-	precErr = NewDecWithPrec(3, Precision)
+	precErr = NewDecWithPrec(10, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
 }
 
 // point at which two lines intercept,

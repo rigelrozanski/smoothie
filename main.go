@@ -7,6 +7,8 @@ import (
 // nolint
 const Precision = 10
 
+var startDivision = int64(3)
+
 // evaluation function for a circle
 func Fn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
@@ -64,7 +66,6 @@ func main() {
 	XBoundMax := OneDec()
 
 	// starting superset
-	startDivision := int64(3)
 	supersetPolygon := regularDivision(startDivision, XBoundMax)
 
 	for divisions := startDivision + 1; true; divisions++ {
