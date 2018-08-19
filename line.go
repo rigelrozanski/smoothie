@@ -30,16 +30,26 @@ func (l Line) Length() Dec {
 	return inter5.Sqrt()
 }
 
+// Area under the line
+// (x2 - x1) * (y2 + y1)/2
+func (l Line) Area() Dec {
+	inter1 := l.End.X.Sub(l.Start.X)
+	inter2 := (l.End.Y.Add(l.Start.Y)).Quo(two)
+	return inter1.Mul(inter2)
+}
+
 // y-axis end of line l is within end of l2
 func (l Line) WithinL2XBound(l2 Line) bool {
 	return l.End.X.LTE(l2.End.X)
 }
 
-var zero = ZeroDec()
-var precErr Dec
+var zero, precErr, two, four Dec
 
 func init() {
-	precErr = NewDecWithPrec(10, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	zero = ZeroDec()
+	two = NewDec(2)
+	four = NewDec(4)
 }
 
 // point at which two lines intercept,
