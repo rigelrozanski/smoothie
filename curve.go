@@ -23,7 +23,7 @@ func NewRegularCurve(order int64, startPoint Point, xBoundMax Dec, fn CurveFn) C
 		}
 		y2 := fn(x2)
 		endPoint := Point{x2, y2}
-		regularCurve[side] = NewLine(startPoint, endPoint, order)
+		regularCurve[side] = NewLine(startPoint, endPoint)
 		startPoint = endPoint
 	}
 	return regularCurve
@@ -71,10 +71,10 @@ func (c Curve) OffsetCurve(xAxisForwardShift, startX, endY, xBoundMax Dec, first
 
 	firstLineEndX := c[0].Start.X.Add(xAxisForwardShift)
 	firstLineEndPt := Point{firstLineEndX, fn(firstLineEndX)}
-	firstLine := NewLine(firstLineStartPt, firstLineEndPt, firstLineOrder)
+	firstLine := NewLine(firstLineStartPt, firstLineEndPt)
 
 	// trim the first line
-	firstLine = NewLine(firstLine.PointWithX(startX), firstLineEndPt, firstLineOrder)
+	firstLine = NewLine(firstLine.PointWithX(startX), firstLineEndPt)
 
 	offsetCurve := make(map[int64]Line)
 	offsetCurve[0] = firstLine
@@ -102,12 +102,12 @@ func (c Curve) OffsetCurve(xAxisForwardShift, startX, endY, xBoundMax Dec, first
 			endPt = Point{endX, endY.Neg()}
 		}
 
-		offsetCurve[int64(i+1)] = NewLine(startPt, endPt, line.Order)
+		offsetCurve[int64(i+1)] = NewLine(startPt, endPt)
 	}
 
 	// trim the last line
 	j := int64(len(offsetCurve)) - 1
-	offsetCurve[j] = NewLine(offsetCurve[j].Start, offsetCurve[j].PointWithY(endY), offsetCurve[j].Order)
+	offsetCurve[j] = NewLine(offsetCurve[j].Start, offsetCurve[j].PointWithY(endY))
 
 	return offsetCurve
 }
@@ -136,21 +136,21 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			break
 		}
 
-		interceptPt, withinBounds, sameStartingPt := tracing.Intercept(comparing)
-		//fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
-		//fmt.Printf("debug sameStartingPt: %v\n", sameStartingPt)
-		//fmt.Printf("debug withinBounds: %v\n", withinBounds)
-		//fmt.Printf("debug interceptPt: %v\n", interceptPt)
-		//fmt.Printf("debug comparing: %v\n", comparing)
-		//fmt.Printf("debug tracing: %v\n", tracing)
+		interceptPt, withinBounds, isStartingPt, isEndingPt := tracing.Intercept(comparing)
+		fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
+		fmt.Printf("debug isStartingPt: %v\n", isStartingPt)
+		fmt.Printf("debug withinBounds: %v\n", withinBounds)
+		fmt.Printf("debug interceptPt: %v\n", interceptPt)
+		fmt.Printf("debug comparing: %v\n", comparing)
+		fmt.Printf("debug tracing: %v\n", tracing)
 
 		doInterceptSwitch := false
-		if withinBounds && !sameStartingPt {
-			//fmt.Println("Hit1")
+		if withinBounds && !isStartingPt && !isEndingPt {
+			fmt.Println("Hit1")
 			doInterceptSwitch = true
-		} else if sameStartingPt && !justIntercepted {
+		} else if isStartingPt && !justIntercepted {
 
-			//fmt.Println("Hit2")
+			fmt.Println("Hit2")
 			// get min X
 			switcharoo := false
 			if tracing.End.X.LTE(comparing.End.X) {
@@ -171,32 +171,20 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 				comparing = nextComparing
 				tracingC1 = !tracingC1
 			}
-
-			// if the trace and compare have intersecting
-			// vertices always switch to the greatest number
-			// of order as it will be closer the curve
-			//if comparing.Order >= tracing.Order { // PROBLEM - for rotation compating order can be bigger BUT shouldn't move to higher order!
-			//fmt.Println("Hit2.1")
-
-			//// the ol' switcharoo
-			//nextTracing := comparing
-			//nextComparing := tracing
-			//tracing = nextTracing
-			//comparing = nextComparing
-			//tracingC1 = !tracingC1
-			//}
 		}
 		// else - biz as usual!
 
 		switch {
 		case doInterceptSwitch:
-			//fmt.Println("Hit3")
+			fmt.Println("Hit3")
 
-			superset[newSideN] = NewLine(tracing.Start, interceptPt, tracing.Order)
+			superset[newSideN] = NewLine(tracing.Start, interceptPt)
 			newSideN++
 
-			nextTracing := NewLine(interceptPt, comparing.End, comparing.Order)
-			nextComparing := NewLine(interceptPt, tracing.End, tracing.Order)
+			nextTracing := NewLine(interceptPt, comparing.End)
+			fmt.Printf("debug nextTracing: %v\n", nextTracing)
+			nextComparing := NewLine(interceptPt, tracing.End)
+			fmt.Printf("debug nextComparing: %v\n", nextComparing)
 			tracing = nextTracing
 			comparing = nextComparing
 
@@ -204,8 +192,23 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 			justIntercepted = true
 
+		case withinBounds && isEndingPt:
+
+			superset[newSideN] = NewLine(tracing.Start, interceptPt)
+			newSideN++
+
+			c1SideN++
+			c2SideN++
+			if tracingC1 {
+				tracing = c1[c1SideN]
+				comparing = c2[c2SideN]
+			} else {
+				tracing = c2[c2SideN]
+				comparing = c1[c1SideN]
+			}
+
 		case tracingC1:
-			//fmt.Println("Hit4")
+			fmt.Println("Hit4")
 			if tracing.WithinL2XBound(comparing) {
 				//fmt.Println("Hit4.1")
 				superset[newSideN] = tracing
@@ -224,7 +227,7 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			justIntercepted = false
 
 		case !tracingC1:
-			//fmt.Println("Hit5")
+			fmt.Println("Hit5")
 			if tracing.WithinL2XBound(comparing) {
 				//fmt.Println("Hit5.1")
 				superset[newSideN] = tracing
