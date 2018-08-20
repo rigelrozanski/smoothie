@@ -147,26 +147,51 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 		doInterceptSwitch := false
 		if withinBounds && !sameStartingPt {
+			fmt.Println("Hit1")
 			doInterceptSwitch = true
 		} else if sameStartingPt && !justIntercepted {
 
-			// if the trace and compare have intersecting
-			// vertices always switch to the greatest number
-			// of order as it will be closer the curve
-			if comparing.Order >= tracing.Order {
-
-				// the ol' switcharoo
+			fmt.Println("Hit2")
+			// get min X
+			switcharoo := false
+			if tracing.End.X.LTE(comparing.End.X) {
+				comparePt := comparing.PointWithX(tracing.End.X)
+				if comparePt.Y.GT(tracing.End.Y) {
+					switcharoo = true
+				}
+			} else {
+				tracingPt := tracing.PointWithX(comparing.End.X)
+				if tracingPt.Y.LT(comparing.End.Y) {
+					switcharoo = true
+				}
+			}
+			if switcharoo {
 				nextTracing := comparing
 				nextComparing := tracing
 				tracing = nextTracing
 				comparing = nextComparing
 				tracingC1 = !tracingC1
 			}
+
+			// if the trace and compare have intersecting
+			// vertices always switch to the greatest number
+			// of order as it will be closer the curve
+			//if comparing.Order >= tracing.Order { // PROBLEM - for rotation compating order can be bigger BUT shouldn't move to higher order!
+			//fmt.Println("Hit2.1")
+
+			//// the ol' switcharoo
+			//nextTracing := comparing
+			//nextComparing := tracing
+			//tracing = nextTracing
+			//comparing = nextComparing
+			//tracingC1 = !tracingC1
+			//}
 		}
 		// else - biz as usual!
 
 		switch {
 		case doInterceptSwitch:
+			fmt.Println("Hit3")
 
 			superset[newSideN] = NewLine(tracing.Start, interceptPt, tracing.Order)
 			newSideN++
@@ -181,18 +206,22 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			justIntercepted = true
 
 		case tracingC1:
+			fmt.Println("Hit4")
 			if tracing.WithinL2XBound(comparing) {
+				fmt.Println("Hit4.1")
 				superset[newSideN] = tracing
 				newSideN++
 				c1SideN++
 				tracing = c1[c1SideN]
 			} else if comparing.WithinL2XBound(tracing) {
+				fmt.Println("Hit4.2")
 				c2SideN++
 				comparing = c2[c2SideN]
 			}
 			justIntercepted = false
 
 		case !tracingC1:
+			fmt.Println("Hit5")
 			if tracing.WithinL2XBound(comparing) {
 				superset[newSideN] = tracing
 				newSideN++

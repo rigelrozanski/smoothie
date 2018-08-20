@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 // a classic "point"
 type Point struct {
 	X, Y Dec
@@ -61,6 +59,7 @@ func (l Line) Area() Dec {
 // y-axis end of line l is within end of l2
 func (l Line) WithinL2XBound(l2 Line) bool {
 	return MinDec(l.End.X, l.Start.X).LTE(MaxDec(l2.End.X, l2.Start.X))
+	//return l.End.X.LTE(l2.End.X)
 }
 
 var zero, precErr, two, four Dec
@@ -94,33 +93,59 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 	y := num.Quo(denom)
 	intercept = l.PointWithY(y)
 
-	fmt.Printf("debug intercept.X: %v\n", intercept.X)
-	fmt.Printf("debug intercept.Y: %v\n", intercept.Y)
-	fmt.Printf("debug l.Start.X: %v\n", l.Start.X)
-	fmt.Printf("debug l.End.X: %v\n", l.End.X)
-	fmt.Printf("debug l.Start.Y: %v\n", l.Start.Y)
-	fmt.Printf("debug l.End.Y: %v\n", l.End.Y)
-	fmt.Printf("debug l2.Start.X: %v\n", l2.Start.X)
-	fmt.Printf("debug l2.End.X: %v\n", l2.End.X)
-	fmt.Printf("debug l2.Start.Y: %v\n", l2.Start.Y)
-	fmt.Printf("debug l2.End.Y: %v\n", l2.End.Y)
-	fmt.Println(intercept.X.GT(MinDec(l.Start.X, l.End.X)))
-	fmt.Println(intercept.X.LT(MaxDec(l.Start.X, l.End.X)))
-	fmt.Println(intercept.X.GT(MinDec(l2.Start.X, l2.End.X)))
-	fmt.Println(intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)))
-	fmt.Println(intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)))
-	fmt.Println(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)))
-	fmt.Println(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)))
-	fmt.Println(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)))
+	//fmt.Printf("debug intercept.X: %v\n", intercept.X)
+	//fmt.Printf("debug intercept.Y: %v\n", intercept.Y)
+	//fmt.Printf("debug l.Start.X: %v\n", l.Start.X)
+	//fmt.Printf("debug l.End.X: %v\n", l.End.X)
+	//fmt.Printf("debug l.Start.Y: %v\n", l.Start.Y)
+	//fmt.Printf("debug l.End.Y: %v\n", l.End.Y)
+	//fmt.Printf("debug l2.Start.X: %v\n", l2.Start.X)
+	//fmt.Printf("debug l2.End.X: %v\n", l2.End.X)
+	//fmt.Printf("debug l2.Start.Y: %v\n", l2.Start.Y)
+	//fmt.Printf("debug l2.End.Y: %v\n", l2.End.Y)
+	//fmt.Println(intercept.X.GT(MinDec(l.Start.X, l.End.X)))
+	//fmt.Println(intercept.X.LT(MaxDec(l.Start.X, l.End.X)))
+	//fmt.Println(intercept.X.GT(MinDec(l2.Start.X, l2.End.X)))
+	//fmt.Println(intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)))
+	//fmt.Println(intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)))
+	//fmt.Println(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)))
+	//fmt.Println(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)))
+	//fmt.Println(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)))
+
+	lXLine, l2XLine, lYLine, l2YLine := false, false, false, false
+	if l.Start.X.Equal(l.End.X) {
+		lXLine = true
+	} else if ((l.Start.X.Sub(l.End.X)).Abs()).LT(precErr) {
+		lXLine = true
+	}
+
+	if l2.Start.X.Equal(l2.End.X) {
+		l2XLine = true
+	} else if ((l2.Start.X.Sub(l2.End.X)).Abs()).LT(precErr) {
+		l2XLine = true
+	}
+
+	if l.Start.Y.Equal(l.End.Y) {
+		lYLine = true
+	} else if ((l.Start.Y.Sub(l.End.Y)).Abs()).LT(precErr) {
+		lYLine = true
+	}
+
+	if l2.Start.Y.Equal(l2.End.Y) {
+		l2YLine = true
+	} else if ((l2.Start.Y.Sub(l2.End.Y)).Abs()).LT(precErr) {
+		l2YLine = true
+	}
+
 	withinBounds = false
-	if (intercept.X.GT(MinDec(l.Start.X, l.End.X)) || l.Start.X.Equal(l.End.X)) &&
-		(intercept.X.LT(MaxDec(l.Start.X, l.End.X)) || l.Start.X.Equal(l.End.X)) &&
-		(intercept.X.GT(MinDec(l2.Start.X, l2.End.X)) || l2.Start.X.Equal(l2.End.X)) &&
-		(intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)) || l2.Start.X.Equal(l2.End.X)) &&
-		(intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)) || l.Start.Y.Equal(l.End.Y)) &&
-		(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)) || l.Start.Y.Equal(l.End.Y)) &&
-		(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)) || l2.Start.Y.Equal(l2.End.Y)) && // problematic if straight line
-		(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)) || l2.Start.Y.Equal(l2.End.Y)) {
+	if (intercept.X.GT(MinDec(l.Start.X, l.End.X)) || lXLine) &&
+		(intercept.X.LT(MaxDec(l.Start.X, l.End.X)) || lXLine) &&
+		(intercept.X.GT(MinDec(l2.Start.X, l2.End.X)) || l2XLine) &&
+		(intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)) || l2XLine) &&
+		(intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)) || lYLine) &&
+		(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)) || lYLine) &&
+		(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)) || l2YLine) && // problematic if straight line
+		(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)) || l2YLine) {
 		withinBounds = true
 	}
 
