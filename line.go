@@ -58,7 +58,7 @@ func (l Line) Area() Dec {
 
 // y-axis end of line l is within end of l2
 func (l Line) WithinL2XBound(l2 Line) bool {
-	return l.End.X.LTE(l2.End.X)
+	return MinDec(l.End.X, l.Start.X).LTE(MaxDec(l2.End.X, l2.Start.X))
 }
 
 var zero, precErr, two, four Dec
@@ -90,18 +90,17 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 		return intercept, false, false
 	}
 	y := num.Quo(denom)
-	x := (y.Sub(l.B)).Quo(l.M)
-	intercept = Point{x, y}
+	intercept = l.PointWithY(y)
 
 	withinBounds = false
-	if intercept.X.GT(l.Start.X) &&
-		intercept.X.LT(l.End.X) &&
-		intercept.X.GT(l2.Start.X) &&
-		intercept.X.LT(l2.End.X) &&
-		intercept.Y.LT(l.Start.Y) &&
-		intercept.Y.GT(l.End.Y) &&
-		intercept.Y.LT(l2.Start.Y) &&
-		intercept.Y.GT(l2.End.Y) {
+	if intercept.X.GT(MinDec(l.Start.X, l.End.X)) &&
+		intercept.X.LT(MaxDec(l.Start.X, l.End.X)) &&
+		intercept.X.GT(MinDec(l2.Start.X, l2.End.X)) &&
+		intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)) &&
+		intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)) &&
+		intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)) &&
+		intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)) &&
+		intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)) {
 		withinBounds = true
 	}
 

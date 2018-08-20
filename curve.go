@@ -58,13 +58,14 @@ func (c Curve) String() string {
 // CONTRACT - the first and last points of the input curve (c) touch the curve function
 // CONTRACT - do not offset more than the first-line-order's width
 func (c Curve) OffsetCurve(xAxisForwardShift, startX, endY, xBoundMax Dec, firstLineOrder int64, fn CurveFn) Curve {
+	fmt.Printf("debug OffsetCurve HIT\n")
 
 	// construct the first by working backwards from the first shifted point
 	firstLineWidth := xBoundMax.Quo(NewDec(firstLineOrder))
 	firstLineStartX := xAxisForwardShift.Sub(firstLineWidth) // should be negative
 	if firstLineStartX.GT(zero) {
 		msg := fmt.Sprintf("bad shift, cannot shift more than first line width\n\tfirstLineWidth\t%v\n\tfirstLineStartX\t%v\n",
-			firstLineWidth, firstLineStartX)
+			firstLineWidth.String(), firstLineStartX.String())
 		panic(msg)
 	}
 	firstLineStartPt := Point{firstLineStartX, fn(firstLineStartX)}
@@ -137,6 +138,12 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 		}
 
 		interceptPt, withinBounds, sameStartingPt := tracing.Intercept(comparing)
+		//fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
+		//fmt.Printf("debug sameStartingPt: %v\n", sameStartingPt)
+		//fmt.Printf("debug withinBounds: %v\n", withinBounds)
+		//fmt.Printf("debug interceptPt: %v\n", interceptPt)
+		//fmt.Printf("debug comparing: %v\n", comparing)
+		//fmt.Printf("debug tracing: %v\n", tracing)
 
 		doInterceptSwitch := false
 		if withinBounds && !sameStartingPt {
