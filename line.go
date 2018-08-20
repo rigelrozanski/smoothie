@@ -117,6 +117,10 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 		intercept = l2.PointWithX(l.Start.X)
 	} else if l2XLine {
 		intercept = l.PointWithX(l2.Start.X)
+	} else if lYLine {
+		intercept = l2.PointWithY(l.Start.Y)
+	} else if l2YLine {
+		intercept = l.PointWithY(l2.Start.Y)
 	} else {
 
 		//  y  = (b2 m1 - b1 m2)/(m1 - m2)
