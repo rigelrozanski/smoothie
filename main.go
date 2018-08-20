@@ -58,6 +58,7 @@ func main() {
 
 		///////////////////////////////////////////////////////////////////////////////////
 		// additional checks
+		// NOTE the superset length can decrease in this process
 		if err != nil {
 			switch {
 			case !(newSuperset[int64(len(newSuperset)-1)].End.X).Equal(OneDec()):

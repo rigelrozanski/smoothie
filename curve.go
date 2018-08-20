@@ -127,6 +127,8 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 	tracing := c1[c1SideN]
 	comparing := c2[c2SideN]
 
+	// This term is to avoid auto-switching to the highest division term
+	// when the two lines are only starting at the same point because they were just intercepted!
 	justIntercepted := false
 
 	for {
@@ -139,15 +141,22 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 		doInterceptSwitch := false
 		if withinBounds && !sameStartingPt {
 			doInterceptSwitch = true
-		} else if sameStartingPt && !tracingC1 && !justIntercepted {
+		} else if sameStartingPt && !justIntercepted {
 
-			// do the ol' switcharoo
-			nextTracing := comparing
-			nextComparing := tracing
-			tracing = nextTracing
-			comparing = nextComparing
-			tracingC1 = !tracingC1
-		} // otherwise continue on c1!
+			// if the trace and compare have intersecting
+			// vertices always switch to the greatest number
+			// of divisions as it will be closer the curve
+			if comparing.Division > tracing.Division {
+
+				// the ol' switcharoo
+				nextTracing := comparing
+				nextComparing := tracing
+				tracing = nextTracing
+				comparing = nextComparing
+				tracingC1 = !tracingC1
+			}
+		}
+		// else - biz as usual!
 
 		switch {
 		case doInterceptSwitch:
@@ -189,7 +198,7 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			justIntercepted = false
 
 		default:
-			panic("wierd!")
+			panic("weird!")
 		}
 	}
 
@@ -199,7 +208,6 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 	///////////////////////////////////////////////////////////////////////////////////
 	// SANITY
-	// NOTE once in a while the oldsubset length > newsubset length - is actually correct
 	switch {
 	case (supersetArea).LT(c1Area):
 		err = errors.New("c1 > superset area")
