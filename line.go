@@ -1,5 +1,14 @@
 package main
 
+var zero, precErr, two, four Dec
+
+func init() {
+	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	zero = ZeroDec()
+	two = NewDec(2)
+	four = NewDec(4)
+}
+
 // a classic "point"
 type Point struct {
 	X, Y Dec
@@ -60,15 +69,6 @@ func (l Line) Area() Dec {
 func (l Line) WithinL2XBound(l2 Line) bool {
 	return MinDec(l.End.X, l.Start.X).LTE(MaxDec(l2.End.X, l2.Start.X))
 	//return l.End.X.LTE(l2.End.X)
-}
-
-var zero, precErr, two, four Dec
-
-func init() {
-	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
-	zero = ZeroDec()
-	two = NewDec(2)
-	four = NewDec(4)
 }
 
 // point at which two lines intercept,

@@ -22,8 +22,8 @@ import (
 // nolint
 const Precision = 15
 
-var startOrder = int64(2) // number of divisions in first curve
-var numberOfOffsets = int64(2)
+var startOrder = int64(4) //7number of divisions in first curve
+var numberOfOffsets = startOrder
 
 func circleFn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
@@ -42,6 +42,7 @@ func main() {
 	superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
 	order := startOrder + 1
 	for ; order < startOrder*2; order++ {
+		//for ; true; order++ {
 
 		// get the superset curve of two curves
 		subset := NewRegularCurve(order, startPt, xBoundMax, circleFn)
@@ -80,7 +81,7 @@ func main() {
 
 	// PHASE 2 - offset the superset curve
 	fmt.Println("---------------------------------------------PHASE-2----------------------------------------------------")
-	fmt.Printf("debug startOrder: %v\n", startOrder)
+	//fmt.Printf("debug startOrder: %v\n", startOrder)
 	finalOrder := startOrder*2 - 1
 	//maxOffset := xBoundMax.Quo(NewDec(startOrder)) //////////////////////////////////////////////////////////////////////////////// TODO this one actually correct but need to mirror
 	maxOffset := xBoundMax.Quo(NewDec(finalOrder))
@@ -88,8 +89,8 @@ func main() {
 	for offsetI := int64(1); offsetI <= numberOfOffsets; offsetI++ {
 		output := "---------------------------------------------------------------\n"
 		offsetWidth := (maxOffset.Mul(NewDec(offsetI))).Quo(NewDec(numberOfOffsets))
-		fmt.Printf("debug maxOffset: %v\n", maxOffset.String())
-		fmt.Printf("debug offsetWidth: %v\n", offsetWidth.String())
+		//fmt.Printf("debug maxOffset: %v\n", maxOffset.String())
+		//fmt.Printf("debug offsetWidth: %v\n", offsetWidth.String())
 		offset := phase1Superset.OffsetCurve(offsetWidth, zero, zero, xBoundMax, finalOrder, circleFn)
 
 		newSuperset, supersetLength, supersetArea, offsetLength, offsetArea, oldSupersetLength, oldSupersetArea, err := SupersetCurve(superset, offset, circleFn)
@@ -104,10 +105,10 @@ func main() {
 			len(superset), supersetLength.String(), supersetArea.String())
 		fmt.Println(output)
 
-		//if err != nil {
-		panic(fmt.Sprintf("Error: %v\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
-			err, offset.String(), superset.String(), newSuperset.String()))
-		//}
+		if err != nil {
+			panic(fmt.Sprintf("Error: %v\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
+				err, offset.String(), superset.String(), newSuperset.String()))
+		}
 
 		// lastly set the new superset curve and continue
 		superset = newSuperset

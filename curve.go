@@ -138,20 +138,20 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 		}
 
 		interceptPt, withinBounds, sameStartingPt := tracing.Intercept(comparing)
-		fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
-		fmt.Printf("debug sameStartingPt: %v\n", sameStartingPt)
-		fmt.Printf("debug withinBounds: %v\n", withinBounds)
-		fmt.Printf("debug interceptPt: %v\n", interceptPt)
-		fmt.Printf("debug comparing: %v\n", comparing)
-		fmt.Printf("debug tracing: %v\n", tracing)
+		//fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
+		//fmt.Printf("debug sameStartingPt: %v\n", sameStartingPt)
+		//fmt.Printf("debug withinBounds: %v\n", withinBounds)
+		//fmt.Printf("debug interceptPt: %v\n", interceptPt)
+		//fmt.Printf("debug comparing: %v\n", comparing)
+		//fmt.Printf("debug tracing: %v\n", tracing)
 
 		doInterceptSwitch := false
 		if withinBounds && !sameStartingPt {
-			fmt.Println("Hit1")
+			//fmt.Println("Hit1")
 			doInterceptSwitch = true
 		} else if sameStartingPt && !justIntercepted {
 
-			fmt.Println("Hit2")
+			//fmt.Println("Hit2")
 			// get min X
 			switcharoo := false
 			if tracing.End.X.LTE(comparing.End.X) {
@@ -191,7 +191,7 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 		switch {
 		case doInterceptSwitch:
-			fmt.Println("Hit3")
+			//fmt.Println("Hit3")
 
 			superset[newSideN] = NewLine(tracing.Start, interceptPt, tracing.Order)
 			newSideN++
@@ -206,22 +206,22 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			justIntercepted = true
 
 		case tracingC1:
-			fmt.Println("Hit4")
+			//fmt.Println("Hit4")
 			if tracing.WithinL2XBound(comparing) {
-				fmt.Println("Hit4.1")
+				//fmt.Println("Hit4.1")
 				superset[newSideN] = tracing
 				newSideN++
 				c1SideN++
 				tracing = c1[c1SideN]
 			} else if comparing.WithinL2XBound(tracing) {
-				fmt.Println("Hit4.2")
+				//fmt.Println("Hit4.2")
 				c2SideN++
 				comparing = c2[c2SideN]
 			}
 			justIntercepted = false
 
 		case !tracingC1:
-			fmt.Println("Hit5")
+			//fmt.Println("Hit5")
 			if tracing.WithinL2XBound(comparing) {
 				superset[newSideN] = tracing
 				newSideN++
