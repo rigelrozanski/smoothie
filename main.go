@@ -22,7 +22,8 @@ import (
 // nolint
 const Precision = 15
 
-var startDivision = int64(75)
+var startOrder = int64(3) // number of devisions in first curve
+var numberOfOffsets = int64(3)
 
 func circleFn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
@@ -36,13 +37,14 @@ func main() {
 	xBoundMax := OneDec()
 	startPt := Point{ZeroDec(), OneDec()} // top of the circle
 
-	// phase 1: construct the unrotated superset
-	superset := NewRegularDivisionCurve(startDivision, startPt, xBoundMax, circleFn)
-	division := startDivision + 1
-	for ; true; division++ { //division < startDivision*2; division++ {
+	// PHASE 1: construct the unrotated superset
+	fmt.Println("---------------------------------------------PHASE-1----------------------------------------------------")
+	superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
+	order := startOrder + 1
+	for ; order < startOrder*2; order++ {
 
 		// get the superset curve of two curves
-		subset := NewRegularDivisionCurve(division, startPt, xBoundMax, circleFn)
+		subset := NewRegularCurve(order, startPt, xBoundMax, circleFn)
 		newSuperset, supersetLength, supersetArea, subsetLength, subsetArea, oldSupersetLength, oldSupersetArea, err := SupersetCurve(subset, superset, circleFn)
 
 		// make relative to pi, just for printing :)
@@ -51,8 +53,8 @@ func main() {
 		oldSupersetLength, oldSupersetArea = two.Mul(oldSupersetLength), four.Mul(oldSupersetArea)
 
 		output := "---------------------------------------------------------------\n"
-		output += fmt.Sprintf("Subset: %v\t\t\tlength %v\tarea %v\nSuperset\t# points %v,\tlength %v\tarea %v\n",
-			division, subsetLength.String(), subsetArea.String(),
+		output += fmt.Sprintf("PHASE-1 Subset: %v\t\tlength %v\tarea %v\nSuperset\t# points %v,\tlength %v\tarea %v\n",
+			order, subsetLength.String(), subsetArea.String(),
 			len(superset), supersetLength.String(), supersetArea.String())
 		fmt.Println(output)
 
@@ -62,27 +64,50 @@ func main() {
 		if err != nil {
 			switch {
 			case !(newSuperset[int64(len(newSuperset)-1)].End.X).Equal(OneDec()):
-				err = errors.New("non-shifted newSuperset doesn't end at {1,0}")
+				err = errors.New("non-offset newSuperset doesn't end at {1,0}")
 			case (supersetLength).LT(subsetLength):
 				err = errors.New("subset > superset length")
 			}
 		}
 		if err != nil {
-			insanity := fmt.Sprintf("Error: %v\n\nsubset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
-				err, subset.String(), superset.String(), newSuperset.String())
-			panic(insanity)
+			panic(fmt.Sprintf("Error: %v\n\nsubset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
+				err, subset.String(), superset.String(), newSuperset.String()))
 		}
 
 		// lastly set the new superset curve and continue
 		superset = newSuperset
 	}
 
-	// PHASE 2 - shift the superset curve
+	// PHASE 2 - offset the superset curve
+	fmt.Println("---------------------------------------------PHASE-2----------------------------------------------------")
+	maxOffset := xBoundMax.Quo(NewDec(startOrder))
+	finalOrder := startOrder*2 - 1
+	phase1Superset := superset
+	for offsetI := int64(1); offsetI <= numberOfOffsets; offsetI++ {
+		offsetWidth := (maxOffset.Mul(NewDec(offsetI))).Quo(NewDec(numberOfOffsets))
+		offset := phase1Superset.OffsetCurve(offsetWidth, zero, zero, xBoundMax, finalOrder, circleFn)
 
-	//shifted := superset.ShiftAlongX(NewDecWithPrec(1, 2), zero, zero, xBoundMax, division, circleFn)
+		newSuperset, supersetLength, supersetArea, offsetLength, offsetArea, oldSupersetLength, oldSupersetArea, err := SupersetCurve(offset, superset, circleFn)
 
-	//fmt.Printf("superset =Line[\n%v];\nshifted =Line[\n%v];\n",
-	//superset.String(), shifted.String())
+		// make relative to pi, just for printing :)
+		supersetLength, supersetArea = two.Mul(supersetLength), four.Mul(supersetArea)
+		offsetLength, offsetArea = two.Mul(offsetLength), four.Mul(offsetArea)
+		oldSupersetLength, oldSupersetArea = two.Mul(oldSupersetLength), four.Mul(oldSupersetArea)
+
+		output := "---------------------------------------------------------------\n"
+		output += fmt.Sprintf("PHASE-2 offsetI: %v\t\tlength %v\tarea %v\nSuperset\t# points %v,\tlength %v\tarea %v\n",
+			order, offsetLength.String(), offsetArea.String(),
+			len(superset), supersetLength.String(), supersetArea.String())
+		fmt.Println(output)
+		if err != nil {
+
+			panic(fmt.Sprintf("Error: %v\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
+				err, offset.String(), superset.String(), newSuperset.String()))
+		}
+
+		// lastly set the new superset curve and continue
+		superset = newSuperset
+	}
 }
 
 // primes only
@@ -93,4 +118,4 @@ func main() {
 //439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}
 //superset := regularDivision(primes[0], xBoundMax)
 //for j := 1; j < len(primes); j++ {
-//division := primes[j]
+//order := primes[j]

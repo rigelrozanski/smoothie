@@ -11,22 +11,22 @@ type Curve map[int64]Line
 // 2D function which constructs the curve
 type CurveFn func(x Dec) (y Dec)
 
-func NewRegularDivisionCurve(divisions int64, startPoint Point, xBoundMax Dec, fn CurveFn) Curve {
+func NewRegularCurve(order int64, startPoint Point, xBoundMax Dec, fn CurveFn) Curve {
 
 	// create boring polygon
-	regularDivision := make(map[int64]Line)
+	regularCurve := make(map[int64]Line)
 
-	for side := int64(0); side < divisions; side++ {
-		x2 := (xBoundMax.Mul(NewDec(side + 1))).Quo(NewDec(divisions))
+	for side := int64(0); side < order; side++ {
+		x2 := (xBoundMax.Mul(NewDec(side + 1))).Quo(NewDec(order))
 		if x2.GT(xBoundMax) || (xBoundMax.Sub(x2)).LT(precErr) { // precision correction
 			x2 = xBoundMax
 		}
 		y2 := fn(x2)
 		endPoint := Point{x2, y2}
-		regularDivision[side] = NewLine(startPoint, endPoint, divisions)
+		regularCurve[side] = NewLine(startPoint, endPoint, order)
 		startPoint = endPoint
 	}
-	return regularDivision
+	return regularCurve
 }
 
 //_________________________________________________________________________________________
@@ -56,11 +56,11 @@ func (c Curve) String() string {
 // shift all points uniformly along the x axis,
 //
 // CONTRACT - the first and last points of the input curve (c) touch the curve function
-// CONTRACT - do not rotate more than the first line division width
-func (c Curve) ShiftAlongX(xAxisForwardShift, startX, endY, xBoundMax Dec, firstLineDivision int64, fn CurveFn) Curve {
+// CONTRACT - do not offset more than the first-line-order's width
+func (c Curve) OffsetCurve(xAxisForwardShift, startX, endY, xBoundMax Dec, firstLineOrder int64, fn CurveFn) Curve {
 
 	// construct the first by working backwards from the first shifted point
-	firstLineWidth := xBoundMax.Quo(NewDec(firstLineDivision))
+	firstLineWidth := xBoundMax.Quo(NewDec(firstLineOrder))
 	firstLineStartX := xAxisForwardShift.Sub(firstLineWidth) // should be negative
 	if firstLineStartX.GT(zero) {
 		msg := fmt.Sprintf("bad shift, cannot shift more than first line width\n\tfirstLineWidth\t%v\n\tfirstLineStartX\t%v\n",
@@ -71,13 +71,13 @@ func (c Curve) ShiftAlongX(xAxisForwardShift, startX, endY, xBoundMax Dec, first
 
 	firstLineEndX := c[0].Start.X.Add(xAxisForwardShift)
 	firstLineEndPt := Point{firstLineEndX, fn(firstLineEndX)}
-	firstLine := NewLine(firstLineStartPt, firstLineEndPt, firstLineDivision)
+	firstLine := NewLine(firstLineStartPt, firstLineEndPt, firstLineOrder)
 
 	// trim the first line
-	firstLine = NewLine(firstLine.PointWithX(startX), firstLineEndPt, firstLineDivision)
+	firstLine = NewLine(firstLine.PointWithX(startX), firstLineEndPt, firstLineOrder)
 
-	shiftedCurve := make(map[int64]Line)
-	shiftedCurve[0] = firstLine
+	offsetCurve := make(map[int64]Line)
+	offsetCurve[0] = firstLine
 	for i := 0; i < len(c); i++ {
 		line := c[int64(i)]
 		startX := line.Start.X.Add(xAxisForwardShift)
@@ -102,14 +102,14 @@ func (c Curve) ShiftAlongX(xAxisForwardShift, startX, endY, xBoundMax Dec, first
 			endPt = Point{endX, endY.Neg()}
 		}
 
-		shiftedCurve[int64(i+1)] = NewLine(startPt, endPt, line.Division)
+		offsetCurve[int64(i+1)] = NewLine(startPt, endPt, line.Order)
 	}
 
 	// trim the last line
-	j := int64(len(shiftedCurve)) - 1
-	shiftedCurve[j] = NewLine(shiftedCurve[j].Start, shiftedCurve[j].PointWithY(endY), shiftedCurve[j].Division)
+	j := int64(len(offsetCurve)) - 1
+	offsetCurve[j] = NewLine(offsetCurve[j].Start, offsetCurve[j].PointWithY(endY), offsetCurve[j].Order)
 
-	return shiftedCurve
+	return offsetCurve
 }
 
 //_________________________________________________________________________________________________________________
@@ -127,7 +127,7 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 	tracing := c1[c1SideN]
 	comparing := c2[c2SideN]
 
-	// This term is to avoid auto-switching to the highest division term
+	// This term is to avoid auto-switching to the highest order term
 	// when the two lines are only starting at the same point because they were just intercepted!
 	justIntercepted := false
 
@@ -145,8 +145,8 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 			// if the trace and compare have intersecting
 			// vertices always switch to the greatest number
-			// of divisions as it will be closer the curve
-			if comparing.Division > tracing.Division {
+			// of order as it will be closer the curve
+			if comparing.Order > tracing.Order {
 
 				// the ol' switcharoo
 				nextTracing := comparing
@@ -161,11 +161,11 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 		switch {
 		case doInterceptSwitch:
 
-			superset[newSideN] = NewLine(tracing.Start, interceptPt, tracing.Division)
+			superset[newSideN] = NewLine(tracing.Start, interceptPt, tracing.Order)
 			newSideN++
 
-			nextTracing := NewLine(interceptPt, comparing.End, comparing.Division)
-			nextComparing := NewLine(interceptPt, tracing.End, tracing.Division)
+			nextTracing := NewLine(interceptPt, comparing.End, comparing.Order)
+			nextComparing := NewLine(interceptPt, tracing.End, tracing.Order)
 			tracing = nextTracing
 			comparing = nextComparing
 

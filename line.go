@@ -9,17 +9,17 @@ type Point struct {
 type Line struct {
 	Start, End Point
 	M, B       Dec   //  from y = mx +b
-	Division   int64 // source division order of this line
+	Order      int64 // source order of this line
 }
 
-func NewLine(start, end Point, division int64) Line {
+func NewLine(start, end Point, order int64) Line {
 	denom := end.X.Sub(start.X)
 	if denom.Equal(zero) {
-		return Line{start, end, ZeroDec(), start.Y, division}
+		return Line{start, end, ZeroDec(), start.Y, order}
 	}
 	m := (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
 	b := start.Y.Sub(m.Mul(start.X))
-	return Line{start, end, m, b, division}
+	return Line{start, end, m, b, order}
 }
 
 //_______________________________________________________________________
