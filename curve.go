@@ -138,12 +138,12 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 		}
 
 		interceptPt, withinBounds, sameStartingPt := tracing.Intercept(comparing)
-		//fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
-		//fmt.Printf("debug sameStartingPt: %v\n", sameStartingPt)
-		//fmt.Printf("debug withinBounds: %v\n", withinBounds)
-		//fmt.Printf("debug interceptPt: %v\n", interceptPt)
-		//fmt.Printf("debug comparing: %v\n", comparing)
-		//fmt.Printf("debug tracing: %v\n", tracing)
+		fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
+		fmt.Printf("debug sameStartingPt: %v\n", sameStartingPt)
+		fmt.Printf("debug withinBounds: %v\n", withinBounds)
+		fmt.Printf("debug interceptPt: %v\n", interceptPt)
+		fmt.Printf("debug comparing: %v\n", comparing)
+		fmt.Printf("debug tracing: %v\n", tracing)
 
 		doInterceptSwitch := false
 		if withinBounds && !sameStartingPt {
@@ -153,7 +153,7 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			// if the trace and compare have intersecting
 			// vertices always switch to the greatest number
 			// of order as it will be closer the curve
-			if comparing.Order > tracing.Order {
+			if comparing.Order >= tracing.Order {
 
 				// the ol' switcharoo
 				nextTracing := comparing

@@ -22,8 +22,8 @@ import (
 // nolint
 const Precision = 15
 
-var startOrder = int64(3) // number of divisions in first curve
-var numberOfOffsets = int64(3)
+var startOrder = int64(2) // number of divisions in first curve
+var numberOfOffsets = int64(2)
 
 func circleFn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)

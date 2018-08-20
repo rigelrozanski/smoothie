@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // a classic "point"
 type Point struct {
 	X, Y Dec
@@ -92,17 +94,43 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 	y := num.Quo(denom)
 	intercept = l.PointWithY(y)
 
+	fmt.Printf("debug intercept.X: %v\n", intercept.X)
+	fmt.Printf("debug intercept.Y: %v\n", intercept.Y)
+	fmt.Printf("debug l.Start.X: %v\n", l.Start.X)
+	fmt.Printf("debug l.End.X: %v\n", l.End.X)
+	fmt.Printf("debug l.Start.Y: %v\n", l.Start.Y)
+	fmt.Printf("debug l.End.Y: %v\n", l.End.Y)
+	fmt.Printf("debug l2.Start.X: %v\n", l2.Start.X)
+	fmt.Printf("debug l2.End.X: %v\n", l2.End.X)
+	fmt.Printf("debug l2.Start.Y: %v\n", l2.Start.Y)
+	fmt.Printf("debug l2.End.Y: %v\n", l2.End.Y)
+	fmt.Println(intercept.X.GT(MinDec(l.Start.X, l.End.X)))
+	fmt.Println(intercept.X.LT(MaxDec(l.Start.X, l.End.X)))
+	fmt.Println(intercept.X.GT(MinDec(l2.Start.X, l2.End.X)))
+	fmt.Println(intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)))
+	fmt.Println(intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)))
+	fmt.Println(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)))
+	fmt.Println(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)))
+	fmt.Println(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)))
 	withinBounds = false
-	if intercept.X.GT(MinDec(l.Start.X, l.End.X)) &&
-		intercept.X.LT(MaxDec(l.Start.X, l.End.X)) &&
-		intercept.X.GT(MinDec(l2.Start.X, l2.End.X)) &&
-		intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)) &&
-		intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)) &&
-		intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)) &&
-		intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)) &&
-		intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)) {
+	if (intercept.X.GT(MinDec(l.Start.X, l.End.X)) || l.Start.X.Equal(l.End.X)) &&
+		(intercept.X.LT(MaxDec(l.Start.X, l.End.X)) || l.Start.X.Equal(l.End.X)) &&
+		(intercept.X.GT(MinDec(l2.Start.X, l2.End.X)) || l2.Start.X.Equal(l2.End.X)) &&
+		(intercept.X.LT(MaxDec(l2.Start.X, l2.End.X)) || l2.Start.X.Equal(l2.End.X)) &&
+		(intercept.Y.LT(MaxDec(l.Start.Y, l.End.Y)) || l.Start.Y.Equal(l.End.Y)) &&
+		(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)) || l.Start.Y.Equal(l.End.Y)) &&
+		(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)) || l2.Start.Y.Equal(l2.End.Y)) && // problematic if straight line
+		(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)) || l2.Start.Y.Equal(l2.End.Y)) {
 		withinBounds = true
 	}
+
+	//withinBounds = false
+	//if intercept.X.GT(MinDec(MinDec(l.Start.X, l.End.X), MinDec(l2.Start.X, l2.End.X))) &&
+	//intercept.X.LT(MaxDec(MaxDec(l.Start.X, l.End.X), MaxDec(l2.Start.X, l2.End.X))) &&
+	//intercept.Y.LT(MaxDec(MaxDec(l.Start.Y, l.End.Y), MaxDec(l2.Start.Y, l2.End.Y))) &&
+	//intercept.Y.GT(MinDec(MinDec(l.Start.Y, l.End.Y), MinDec(l2.Start.Y, l2.End.Y))) {
+	//withinBounds = true
+	//}
 
 	return intercept, withinBounds, false
 }
