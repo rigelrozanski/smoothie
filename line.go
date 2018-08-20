@@ -8,13 +8,14 @@ type Point struct {
 // boring ol' straight line
 type Line struct {
 	Start, End Point
-	M, B       Dec //  from y = mx +b
+	M, B       Dec   //  from y = mx +b
+	Division   int64 // source division order of this line
 }
 
-func NewLine(start, end Point) Line {
+func NewLine(start, end Point, division int64) Line {
 	m := (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
 	b := start.Y.Sub(m.Mul(start.X))
-	return Line{start, end, m, b}
+	return Line{start, end, m, b, division}
 }
 
 //_______________________________________________________________________
@@ -62,29 +63,20 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 	}
 	if ((l.Start.X.Sub(l2.Start.X)).Abs()).LT(precErr) &&
 		((l.Start.Y.Sub(l2.Start.Y)).Abs()).LT(precErr) {
-
-		//fmt.Printf("debug precision error: ABSX %v, ABSY %v, l.X %v, l2.X %v, l.Y %v, l2.Y %v\n",
-		//(l.Start.X.Sub(l2.Start.X)).Abs().String(), (l.Start.Y.Sub(l2.Start.Y)).Abs().String(),
-		//l.Start.X.String(), l2.Start.X.String(), l.Start.Y.String(), l2.Start.Y.String())
-
 		return l.Start, false, true
 	}
 
 	//  y  = (b2 m1 - b1 m2)/(m1 - m2)
-	inter1 := l2.B.Mul(l.M)
-	inter2 := l.B.Mul(l2.M)
-	inter3 := inter1.Sub(inter2)
-	inter4 := l.M.Sub(l2.M)
-	if inter4.Equal(zero) {
+	num := (l2.B.Mul(l.M)).Sub(l.B.Mul(l2.M))
+	denom := l.M.Sub(l2.M)
+	if denom.Equal(zero) {
 		return intercept, false, false
 	}
-	y := inter3.Quo(inter4)
+	y := num.Quo(denom)
 	x := (y.Sub(l.B)).Quo(l.M)
 	intercept = Point{x, y}
 
 	withinBounds = false
-	// to deal with precision errors,
-	//  if any of the points are equal we know we're not within bounds
 	if intercept.X.GT(l.Start.X) &&
 		intercept.X.LT(l.End.X) &&
 		intercept.X.GT(l2.Start.X) &&
@@ -98,5 +90,3 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 
 	return intercept, withinBounds, false
 }
-
-//primes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}
