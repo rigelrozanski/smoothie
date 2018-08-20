@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -28,7 +29,7 @@ func NewRegularDivisionCurve(divisions int64, startPoint Point, xBoundMax Dec, f
 	return regularDivision
 }
 
-//____________________________________
+//_________________________________________________________________________________________
 
 // total length and area for all the lines
 func (c Curve) GetLengthArea() (length, area Dec) {
@@ -109,4 +110,101 @@ func (c Curve) ShiftAlongX(xAxisForwardShift, startX, endY, xBoundMax Dec, first
 	shiftedCurve[j] = NewLine(shiftedCurve[j].Start, shiftedCurve[j].PointWithY(endY), shiftedCurve[j].Division)
 
 	return shiftedCurve
+}
+
+//_________________________________________________________________________________________________________________
+
+// get the superset curve of two curves
+func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
+	supersetLength, supersetArea, c1Length, c1Area, c2Length, c2Area Dec, err error) {
+
+	superset = make(Curve)
+
+	newSideN, c1SideN, c2SideN := int64(0), int64(0), int64(0) // side counters of the curves
+	maxC1Sides, maxC2Sides := int64(len(c1)), int64(len(c2))
+
+	tracingC1 := true // is the superset tracing curve c1 or c2
+	tracing := c1[c1SideN]
+	comparing := c2[c2SideN]
+
+	justIntercepted := false
+
+	for {
+		if c2SideN > maxC2Sides-1 || c1SideN > maxC1Sides-1 {
+			break
+		}
+
+		interceptPt, withinBounds, sameStartingPt := tracing.Intercept(comparing)
+
+		doInterceptSwitch := false
+		if withinBounds && !sameStartingPt {
+			doInterceptSwitch = true
+		} else if sameStartingPt && !tracingC1 && !justIntercepted {
+
+			// do the ol' switcharoo
+			nextTracing := comparing
+			nextComparing := tracing
+			tracing = nextTracing
+			comparing = nextComparing
+			tracingC1 = !tracingC1
+		} // otherwise continue on c1!
+
+		switch {
+		case doInterceptSwitch:
+
+			superset[newSideN] = NewLine(tracing.Start, interceptPt, tracing.Division)
+			newSideN++
+
+			nextTracing := NewLine(interceptPt, comparing.End, comparing.Division)
+			nextComparing := NewLine(interceptPt, tracing.End, tracing.Division)
+			tracing = nextTracing
+			comparing = nextComparing
+
+			tracingC1 = !tracingC1 // start tracing the other
+
+			justIntercepted = true
+
+		case tracingC1:
+			if tracing.WithinL2XBound(comparing) {
+				superset[newSideN] = tracing
+				newSideN++
+				c1SideN++
+				tracing = c1[c1SideN]
+			} else if comparing.WithinL2XBound(tracing) {
+				c2SideN++
+				comparing = c2[c2SideN]
+			}
+			justIntercepted = false
+
+		case !tracingC1:
+			if tracing.WithinL2XBound(comparing) {
+				superset[newSideN] = tracing
+				newSideN++
+				c2SideN++
+				tracing = c2[c2SideN]
+			} else if comparing.WithinL2XBound(tracing) {
+				c1SideN++
+				comparing = c1[c1SideN]
+			}
+			justIntercepted = false
+
+		default:
+			panic("wierd!")
+		}
+	}
+
+	supersetLength, supersetArea = superset.GetLengthArea()
+	c1Length, c1Area = c1.GetLengthArea()
+	c2Length, c2Area = c2.GetLengthArea()
+
+	///////////////////////////////////////////////////////////////////////////////////
+	// SANITY
+	// NOTE once in a while the oldsubset length > newsubset length - is actually correct
+	switch {
+	case (supersetArea).LT(c1Area):
+		err = errors.New("c1 > superset area")
+	case (supersetArea).LT(c2Area):
+		err = errors.New("c2 > superset area")
+	}
+	return superset, supersetLength, supersetArea, c1Length, c1Area, c2Length, c2Area, err
 }
