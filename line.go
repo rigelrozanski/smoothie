@@ -67,13 +67,42 @@ func (l Line) Area() Dec {
 
 // y-axis end of line l is within end of l2
 func (l Line) WithinL2XBound(l2 Line) bool {
-	return MinDec(l.End.X, l.Start.X).LTE(MaxDec(l2.End.X, l2.Start.X))
-	//return l.End.X.LTE(l2.End.X)
+	//return MinDec(l.End.X, l.Start.X).LTE(MaxDec(l2.End.X, l2.Start.X)) // iXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX THIS GUY IS BAD
+	if l2.End.X.LT(l2.Start.X) {
+		return l.End.X.LTE(l2.Start.X) // towards the end of the polygon this can happen
+	}
+	//fmt.Printf("debug l.End.X: %v\n", l.End.X)
+	//fmt.Printf("debug l2.End.X: %v\n", l2.End.X)
+	//fmt.Printf("debug l.End.X.LTE(l2.End.X): %v\n", l.End.X.LTE(l2.End.X))
+
+	return l.End.X.LTE(l2.End.X)
 }
 
 // point at which two lines intercept,
 // ... is it within bounds, do the two points start from the same origin?
 func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt bool) {
+
+	lXLine, l2XLine, lYLine, l2YLine := false, false, false, false
+	if l.Start.X.Equal(l.End.X) {
+		lXLine = true
+	} else if ((l.Start.X.Sub(l.End.X)).Abs()).LT(precErr) {
+		lXLine = true
+	}
+	if l2.Start.X.Equal(l2.End.X) {
+		l2XLine = true
+	} else if ((l2.Start.X.Sub(l2.End.X)).Abs()).LT(precErr) {
+		l2XLine = true
+	}
+	if l.Start.Y.Equal(l.End.Y) {
+		lYLine = true
+	} else if ((l.Start.Y.Sub(l.End.Y)).Abs()).LT(precErr) {
+		lYLine = true
+	}
+	if l2.Start.Y.Equal(l2.End.Y) {
+		l2YLine = true
+	} else if ((l2.Start.Y.Sub(l2.End.Y)).Abs()).LT(precErr) {
+		l2YLine = true
+	}
 
 	// if start from the same intercept they cannot be intercepting going forward
 	if l.Start.X.Equal(l2.Start.X) && l.Start.Y.Equal(l2.Start.Y) {
@@ -84,14 +113,21 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 		return l.Start, false, true
 	}
 
-	//  y  = (b2 m1 - b1 m2)/(m1 - m2)
-	num := (l2.B.Mul(l.M)).Sub(l.B.Mul(l2.M))
-	denom := l.M.Sub(l2.M)
-	if denom.Equal(zero) {
-		return intercept, false, false
+	if lXLine {
+		intercept = l2.PointWithX(l.Start.X)
+	} else if l2XLine {
+		intercept = l.PointWithX(l2.Start.X)
+	} else {
+
+		//  y  = (b2 m1 - b1 m2)/(m1 - m2)
+		num := (l2.B.Mul(l.M)).Sub(l.B.Mul(l2.M))
+		denom := l.M.Sub(l2.M)
+		if denom.Equal(zero) {
+			return intercept, false, false
+		}
+		y := num.Quo(denom)
+		intercept = l.PointWithY(y)
 	}
-	y := num.Quo(denom)
-	intercept = l.PointWithY(y)
 
 	//fmt.Printf("debug intercept.X: %v\n", intercept.X)
 	//fmt.Printf("debug intercept.Y: %v\n", intercept.Y)
@@ -111,31 +147,6 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, sameStartingPt 
 	//fmt.Println(intercept.Y.GT(MinDec(l.Start.Y, l.End.Y)))
 	//fmt.Println(intercept.Y.LT(MaxDec(l2.Start.Y, l2.End.Y)))
 	//fmt.Println(intercept.Y.GT(MinDec(l2.Start.Y, l2.End.Y)))
-
-	lXLine, l2XLine, lYLine, l2YLine := false, false, false, false
-	if l.Start.X.Equal(l.End.X) {
-		lXLine = true
-	} else if ((l.Start.X.Sub(l.End.X)).Abs()).LT(precErr) {
-		lXLine = true
-	}
-
-	if l2.Start.X.Equal(l2.End.X) {
-		l2XLine = true
-	} else if ((l2.Start.X.Sub(l2.End.X)).Abs()).LT(precErr) {
-		l2XLine = true
-	}
-
-	if l.Start.Y.Equal(l.End.Y) {
-		lYLine = true
-	} else if ((l.Start.Y.Sub(l.End.Y)).Abs()).LT(precErr) {
-		lYLine = true
-	}
-
-	if l2.Start.Y.Equal(l2.End.Y) {
-		l2YLine = true
-	} else if ((l2.Start.Y.Sub(l2.End.Y)).Abs()).LT(precErr) {
-		l2YLine = true
-	}
 
 	withinBounds = false
 	if (intercept.X.GT(MinDec(l.Start.X, l.End.X)) || lXLine) &&

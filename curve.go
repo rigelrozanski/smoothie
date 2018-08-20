@@ -58,7 +58,6 @@ func (c Curve) String() string {
 // CONTRACT - the first and last points of the input curve (c) touch the curve function
 // CONTRACT - do not offset more than the first-line-order's width
 func (c Curve) OffsetCurve(xAxisForwardShift, startX, endY, xBoundMax Dec, firstLineOrder int64, fn CurveFn) Curve {
-	fmt.Printf("debug OffsetCurve HIT\n")
 
 	// construct the first by working backwards from the first shifted point
 	firstLineWidth := xBoundMax.Quo(NewDec(firstLineOrder))
@@ -216,20 +215,30 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 			} else if comparing.WithinL2XBound(tracing) {
 				//fmt.Println("Hit4.2")
 				c2SideN++
-				comparing = c2[c2SideN]
+				if c2SideN == maxC2Sides {
+					superset[newSideN] = tracing
+				} else {
+					comparing = c2[c2SideN]
+				}
 			}
 			justIntercepted = false
 
 		case !tracingC1:
 			//fmt.Println("Hit5")
 			if tracing.WithinL2XBound(comparing) {
+				//fmt.Println("Hit5.1")
 				superset[newSideN] = tracing
 				newSideN++
 				c2SideN++
 				tracing = c2[c2SideN]
 			} else if comparing.WithinL2XBound(tracing) {
+				//fmt.Println("Hit5.2")
 				c1SideN++
-				comparing = c1[c1SideN]
+				if c1SideN == maxC2Sides {
+					superset[newSideN] = tracing
+				} else {
+					comparing = c1[c1SideN]
+				}
 			}
 			justIntercepted = false
 
