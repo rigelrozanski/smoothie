@@ -22,8 +22,8 @@ func main() {
 	startPt := Point{ZeroDec(), OneDec()} // top of the circle
 
 	// phase 1: construct the unrotated superset
+	supersetPolygon := NewRegularDivisionCurve(startDivision, startPt, xBoundMax, circleFn)
 	for divisions := startDivision + 1; true; divisions++ {
-		supersetPolygon := NewRegularDivisionCurve(startDivision, startPt, xBoundMax, circleFn)
 
 		// primes only
 		//primes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83,
