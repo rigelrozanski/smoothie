@@ -13,6 +13,10 @@ type Line struct {
 }
 
 func NewLine(start, end Point, division int64) Line {
+	denom := end.X.Sub(start.X)
+	if denom.Equal(zero) {
+		return Line{start, end, ZeroDec(), start.Y, division}
+	}
 	m := (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
 	b := start.Y.Sub(m.Mul(start.X))
 	return Line{start, end, m, b, division}
@@ -29,6 +33,19 @@ func (l Line) Length() Dec {
 	inter4 := inter2.Mul(inter2)
 	inter5 := inter3.Add(inter4)
 	return inter5.Sqrt()
+}
+
+// y = mx +b
+func (l Line) PointWithX(x Dec) Point {
+	return Point{x, (x.Mul(l.M)).Add(l.B)}
+}
+
+// x = (y - b)/m
+func (l Line) PointWithY(y Dec) Point {
+	if l.M.Equal(zero) {
+		return Point{l.Start.X, y}
+	}
+	return Point{(y.Sub(l.B)).Quo(l.M), y}
 }
 
 // Area under the line
