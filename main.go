@@ -93,6 +93,9 @@ func main() {
 		//fmt.Printf("debug offsetWidth: %v\n", offsetWidth.String())
 		offset := phase1Superset.OffsetCurve(offsetWidth, xBoundMax, circleFn)
 
+		//panic(fmt.Sprintf("\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\n",
+		//offset.String(), superset.String()))
+
 		newSuperset, supersetLength, supersetArea, offsetLength, offsetArea, oldSupersetLength, oldSupersetArea, err := SupersetCurve(superset, offset, circleFn)
 
 		// make relative to pi, just for printing :)
