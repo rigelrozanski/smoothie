@@ -17,19 +17,42 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 )
 
 // nolint
 const Precision = 15
 
-var startOrder = int64(1000) //number of vertex in first curve estimation
-var numberOfOffsets = int64(100)
+var startOrder = int64(28) //0number of vertex in first curve estimation
+var numberOfOffsets = int64(20)
 
 func circleFn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
 	inter2 := OneDec().Sub(inter1)
 	inter3 := inter2.Sqrt()
 	return inter3
+}
+
+// return a group of primes
+func SieveOfEratosthenes(value int) []int64 {
+
+	res := make([]int64, value)
+	resI := 0
+	f := make([]bool, value)
+	for i := 2; i <= int(math.Sqrt(float64(value))); i++ {
+		if f[i] == false {
+			for j := i * i; j < value; j += i {
+				f[j] = true
+			}
+		}
+	}
+	for i := 2; i < value; i++ {
+		if f[i] == false {
+			res[resI] = int64(i)
+			resI++
+		}
+	}
+	return res[:resI]
 }
 
 func main() {
@@ -39,11 +62,18 @@ func main() {
 
 	// PHASE 1: construct the non-offset superset of different order curves
 	fmt.Println("---------------------------------------------PHASE-1----------------------------------------------------")
-	superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
-	order := startOrder + 1
-	for ; order < startOrder*2; order++ {
-		break // no supersets only rotations
-		//for ; true; order++ {
+	//superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
+	//order := startOrder + 1
+	//for ; order < startOrder*2; order++ {
+	//break // no supersets only rotations
+	//for ; true; order++ {
+
+	//primes only
+	primes := SieveOfEratosthenes(300)
+	superset := NewRegularCurve(primes[0], startPt, xBoundMax, circleFn)
+	for j := 1; j < len(primes); j++ {
+		order := primes[j]
+		fmt.Printf("debug order: %v\n", order)
 
 		// get the superset curve of two curves
 		subset := NewRegularCurve(order, startPt, xBoundMax, circleFn)
