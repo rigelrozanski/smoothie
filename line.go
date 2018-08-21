@@ -1,20 +1,6 @@
 package main
 
-import "fmt"
-
-var zero, precErr, two, four Dec
-
-func init() {
-	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
-	zero = ZeroDec()
-	two = NewDec(2)
-	four = NewDec(4)
-}
-
-// a classic "point"
-type Point struct {
-	X, Y Dec
-}
+/*
 
 // boring ol' straight line
 type Line struct {
@@ -30,6 +16,15 @@ func NewLine(start, end Point) Line {
 	m := (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
 	b := start.Y.Sub(m.Mul(start.X))
 	return Line{start, end, m, b}
+}
+
+var zero, precErr, two, four Dec
+
+func init() {
+	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	zero = ZeroDec()
+	two = NewDec(2)
+	four = NewDec(4)
 }
 
 //_______________________________________________________________________
@@ -191,3 +186,4 @@ func (l Line) Intercept(l2 Line) (intercept Point, withinBounds, isStartingPt, i
 
 	return intercept, withinBounds, false, false
 }
+*/

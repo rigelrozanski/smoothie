@@ -5,49 +5,172 @@ import (
 	"fmt"
 )
 
-// curve as a bunch of lines
-type Curve map[int64]Line
+// a classic "point"
+type Point struct {
+	X, Y Dec
+}
+
+// curve as a bunch of straight lines between points
+type Curve map[int64]Points
 
 // 2D function which constructs the curve
 type CurveFn func(x Dec) (y Dec)
 
-func NewRegularCurve(order int64, startPoint Point, xBoundMax Dec, fn CurveFn) Curve {
+func NewRegularCurve(vertices int64, startPoint Point, xBoundMax Dec, fn CurveFn) Curve {
 
 	// create boring polygon
 	regularCurve := make(map[int64]Line)
+	regularCurve[0] = startPoint
 
-	for side := int64(0); side < order; side++ {
-		x2 := (xBoundMax.Mul(NewDec(side + 1))).Quo(NewDec(order))
-		if x2.GT(xBoundMax) || (xBoundMax.Sub(x2)).LT(precErr) { // precision correction
-			x2 = xBoundMax
+	for i := int64(1); i <= vertices; i++ {
+		x := (xBoundMax.Mul(NewDec(i))).Quo(NewDec(vertices))
+		if x.GT(xBoundMax) || (xBoundMax.Sub(x)).LT(precErr) { // precision correction
+			x = xBoundMax
 		}
-		y2 := fn(x2)
-		endPoint := Point{x2, y2}
-		regularCurve[side] = NewLine(startPoint, endPoint)
-		startPoint = endPoint
+		regularCurve[i] = Point{x, fn(x)}
 	}
 	return regularCurve
 }
 
+// find the point on the curve (find on a linear line if not a vertex)
+// start by looking from the lookup index
+func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {
+
+	pt := c[lookupIndex]
+	interpolateBackwards := false
+	switch {
+	case ((x.Sub(pt.X)).Abs()).LT(precErr): // equal
+		return pt
+
+	case x.GT[pt.X]:
+		if lookupIndex == len(c)-1 {
+			panic("already at the largest point on the curve")
+		}
+		nextPt := c[lookupIndex+1]
+		if nextPt.X.GT(x) {
+			interpolateBackwards = false
+		} else {
+			return PointWithX(lookupIndex+1, x)
+		}
+	case x.LT[pt.X]:
+		if lookupIndex == 0 {
+			panic("already at the largest point on the curve")
+		}
+		prevPt := c[lookupIndex-1]
+		if prevPt.X.LT(x) {
+			interpolateBackwards = true
+		} else {
+			return PointWithX(lookupIndex-1, x)
+		}
+	default:
+		panic("why")
+	}
+
+	// perform interpolation
+	var start, end Point
+	if interpolateBackwards {
+		start, end = c[lookupIndex-1], c[lookupIndex]
+	} else {
+		start, end = c[lookupIndex], c[lookupIndex+1]
+	}
+
+	// y = mx +b
+	var m, b Dec
+	denom := end.X.Sub(start.X)
+	if denom.Equal(zero) {
+		m, b = ZeroDec(), start.Y
+	}
+	m := (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
+	b := start.Y.Sub(m.Mul(start.X))
+
+	return Point{x, (x.Mul(l.M)).Add(l.B)}
+}
+
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxxxxx XXX
+// find the point on the curve (find on a linear line if not a vertex)
+// start by looking from the lookup index
+func (c Curve) PointWithY(lookupIndex int64, y Dec) Point {
+
+	pt := c[lookupIndex]
+	interpolateBackwards := false
+	switch {
+	case ((y.Sub(pt.Y)).Abs()).LT(precErr): // equal
+		return pt
+
+	case y.GT[pt.Y]:
+		if lookupIndex == len(c)-1 {
+			panic("already at the largest point on the curve")
+		}
+		nextPt := c[lookupIndex+1]
+		if nextPt.Y.GT(y) {
+			interpolateBackwards = false
+		} else {
+			return PointWithY(lookupIndex+1, y)
+		}
+	case y.LT[pt.Y]:
+		if lookupIndex == 0 {
+			panic("already at the largest point on the curve")
+		}
+		prevPt := c[lookupIndex-1]
+		if prevPt.Y.LT(y) {
+			interpolateBackwards = true
+		} else {
+			return PointWithY(lookupIndex-1, y)
+		}
+	default:
+		panic("why")
+	}
+
+	// perform interpolation
+	var start, end Point
+	if interpolateBackwards {
+		start, end = c[lookupIndex-1], c[lookupIndex]
+	} else {
+		start, end = c[lookupIndex], c[lookupIndex+1]
+	}
+
+	// y = mx +b
+	var m, b Dec
+	denom := end.Y.Sub(start.Y)
+	if denom.Equal(zero) {
+		m, b = ZeroDec(), start.Y
+	}
+	m := (end.Y.Sub(start.Y)).Quo(end.Y.Sub(start.Y))
+	b := start.Y.Sub(m.Mul(start.Y))
+
+	return Point{(y.Sub(l.B)).Quo(l.M), y}
+}
+
 //_________________________________________________________________________________________
 
-// total length and area for all the lines
+// total length and area for all the lines of the curve
+// length = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+// area = (x2 - x1) * (y2 + y1)/2
 func (c Curve) GetLengthArea() (length, area Dec) {
 	length, area = ZeroDec(), ZeroDec()
-	for _, line := range c {
-		length = length.Add(line.Length())
-		area = area.Add(line.Area())
+	for i := int64(1); i < len(c); i++ {
+
+		// length calc
+		l1 := c[i].X.Sub(c[i-1].X)
+		l2 := c[i].Y.Sub(c[i-1].Y)
+		l3 := l1.Mul(l1)
+		l4 := l2.Mul(l2)
+		l5 := l3.Add(l4)
+		length = length.Add(l5.Sqrt())
+
+		// area calc
+		a1 := c[i].X.Sub(c[i-1].X)
+		a2 := (c[i].Y.Add(c[i-1].Y)).Quo(two)
+		area = area.Add(a1.Mul(a2))
 	}
 	return length, area
 }
 
+// formatted string for mathimatica
 func (c Curve) String() string {
 	out := "{"
-	out += fmt.Sprintf("{%v, %v}", c[0].Start.X, c[0].Start.Y)
-
 	for i := int64(0); i < int64(len(c)); i++ {
-		line := c[i]
-		out += fmt.Sprintf(",{%v, %v}", line.End.X.String(), line.End.Y.String())
+		out += fmt.Sprintf(",{%v, %v}", c[i].X.String(), c[i].Y.String())
 	}
 	out += "}"
 	return out
@@ -120,133 +243,37 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 	superset = make(Curve)
 
-	newSideN, c1SideN, c2SideN := int64(0), int64(0), int64(0) // side counters of the curves
-	maxC1Sides, maxC2Sides := int64(len(c1)), int64(len(c2))
+	// counters for the curves
+	supersetI, c1I, c2I := int64(0), int64(0), int64(0)
 
-	tracingC1 := true // is the superset tracing curve c1 or c2
-	tracing := c1[c1SideN]
-	comparing := c2[c2SideN]
-
-	// This term is to avoid auto-switching to the highest order term
-	// when the two lines are only starting at the same point because they were just intercepted!
-	justIntercepted := false
+	c1Pt, c2Pt := c1[c1I], c2[c2I]
 
 	for {
-		if c2SideN > maxC2Sides-1 || c1SideN > maxC1Sides-1 {
-			break
-		}
-
-		interceptPt, withinBounds, isStartingPt, isEndingPt := tracing.Intercept(comparing)
-		fmt.Printf("debug justIntercepted: %v\n", justIntercepted)
-		fmt.Printf("debug isStartingPt: %v\n", isStartingPt)
-		fmt.Printf("debug withinBounds: %v\n", withinBounds)
-		fmt.Printf("debug interceptPt: %v\n", interceptPt)
-		fmt.Printf("debug comparing: %v\n", comparing)
-		fmt.Printf("debug tracing: %v\n", tracing)
-
-		doInterceptSwitch := false
-		if withinBounds && !isStartingPt && !isEndingPt {
-			fmt.Println("Hit1")
-			doInterceptSwitch = true
-		} else if isStartingPt && !justIntercepted {
-
-			fmt.Println("Hit2")
-			// get min X
-			switcharoo := false
-			if tracing.End.X.LTE(comparing.End.X) {
-				comparePt := comparing.PointWithX(tracing.End.X)
-				if comparePt.Y.GT(tracing.End.Y) {
-					switcharoo = true
-				}
-			} else {
-				tracingPt := tracing.PointWithX(comparing.End.X)
-				if tracingPt.Y.LT(comparing.End.Y) {
-					switcharoo = true
-				}
-			}
-			if switcharoo {
-				nextTracing := comparing
-				nextComparing := tracing
-				tracing = nextTracing
-				comparing = nextComparing
-				tracingC1 = !tracingC1
-			}
-		}
-		// else - biz as usual!
+		var newPt Point
+		c1Pt, c2Pt := c1[c1I], c2[c2I]
 
 		switch {
-		case doInterceptSwitch:
-			fmt.Println("Hit3")
-
-			superset[newSideN] = NewLine(tracing.Start, interceptPt)
-			newSideN++
-
-			nextTracing := NewLine(interceptPt, comparing.End)
-			fmt.Printf("debug nextTracing: %v\n", nextTracing)
-			nextComparing := NewLine(interceptPt, tracing.End)
-			fmt.Printf("debug nextComparing: %v\n", nextComparing)
-			tracing = nextTracing
-			comparing = nextComparing
-
-			tracingC1 = !tracingC1 // start tracing the other
-
-			justIntercepted = true
-
-		case withinBounds && isEndingPt:
-
-			superset[newSideN] = NewLine(tracing.Start, interceptPt)
-			newSideN++
-
-			c1SideN++
-			c2SideN++
-			if tracingC1 {
-				tracing = c1[c1SideN]
-				comparing = c2[c2SideN]
-			} else {
-				tracing = c2[c2SideN]
-				comparing = c1[c1SideN]
-			}
-
-		case tracingC1:
-			fmt.Println("Hit4")
-			if tracing.WithinL2XBound(comparing) {
-				//fmt.Println("Hit4.1")
-				superset[newSideN] = tracing
-				newSideN++
-				c1SideN++
-				tracing = c1[c1SideN]
-			} else if comparing.WithinL2XBound(tracing) {
-				//fmt.Println("Hit4.2")
-				c2SideN++
-				if c2SideN == maxC2Sides {
-					superset[newSideN] = tracing
-				} else {
-					comparing = c2[c2SideN]
-				}
-			}
-			justIntercepted = false
-
-		case !tracingC1:
-			fmt.Println("Hit5")
-			if tracing.WithinL2XBound(comparing) {
-				//fmt.Println("Hit5.1")
-				superset[newSideN] = tracing
-				newSideN++
-				c2SideN++
-				tracing = c2[c2SideN]
-			} else if comparing.WithinL2XBound(tracing) {
-				//fmt.Println("Hit5.2")
-				c1SideN++
-				if c1SideN == maxC2Sides {
-					superset[newSideN] = tracing
-				} else {
-					comparing = c1[c1SideN]
-				}
-			}
-			justIntercepted = false
-
+		case ((c1Pt.X.Sub(c1Pt.X)).Abs()).LT(precErr): // equal
+			newPt := Point{c1Pt.X, MaxDec{c1Pt.Y, c2Pt.Y}} // TODO don't use MAX (only applies to circle)
+			c1I++
+			c2I++
+		case c1Pt.X.LT(c2Pt.X): // pt1 > pt2
+			c2Interpolated := c2Pt.PointWithX(c1Pt.X)
+			newPt := Point{c1Pt.X, MaxDec{c1Pt.Y, c2Interpolated.Y}}
+			c1I++
+		case c2Pt.X.LT(c1Pt.X): // pt1 > pt2
+			c1Interpolated := c1Pt.PointWithX(c2Pt.X)
+			newPt := Point{c2Pt.X, MaxDec{c2Pt.Y, c1Interpolated.Y}}
+			c2I++
 		default:
-			panic("weird!")
+			panic("why")
+		}
+
+		superset[supersetI] = newPt
+		supersetI++
+
+		if c1I >= int64(len(c1)) || c2I >= int64(len(c2)) {
+			break
 		}
 	}
 
