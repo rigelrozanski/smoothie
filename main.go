@@ -20,9 +20,9 @@ import (
 )
 
 // nolint
-const Precision = 20
+const Precision = 25
 
-var startOrder = int64(100) // number of vertex in first curve estimation
+var startOrder = int64(30) // number of vertex in first curve estimation
 var numberOfOffsets = startOrder
 
 func circleFn(x Dec) (y Dec) {
@@ -83,14 +83,14 @@ func main() {
 		superset = newSuperset
 	}
 
-	return
+	//return
 
 	// PHASE 2 - offset the superset curve
 	fmt.Println("---------------------------------------------PHASE-2----------------------------------------------------")
 	//fmt.Printf("debug startOrder: %v\n", startOrder)
-	maxOffset := xBoundMax.Quo(NewDec(startOrder))
-	//finalOrder := startOrder*2 - 1
-	//maxOffset := xBoundMax.Quo(NewDec(finalOrder))
+	//maxOffset := xBoundMax.Quo(NewDec(startOrder))
+	finalOrder := startOrder * 2 * 2
+	maxOffset := xBoundMax.Quo(NewDec(finalOrder))
 	phase1Superset := superset
 	for offsetI := int64(1); offsetI <= numberOfOffsets; offsetI++ {
 		output := "---------------------------------------------------------------\n"
@@ -118,6 +118,7 @@ func main() {
 		//offset.String(), superset.String(), newSuperset.String())
 
 		if err != nil {
+			return
 			panic(fmt.Sprintf("\nError: %v\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
 				err, offset.String(), superset.String(), newSuperset.String()))
 		}
