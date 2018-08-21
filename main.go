@@ -20,9 +20,9 @@ import (
 )
 
 // nolint
-const Precision = 15
+const Precision = 500
 
-var startOrder = int64(3) // number of vertex in first curve estimation
+var startOrder = int64(100) // number of vertex in first curve estimation
 var numberOfOffsets = startOrder
 
 func circleFn(x Dec) (y Dec) {
@@ -53,9 +53,9 @@ func main() {
 		subsetLength, subsetArea = two.Mul(subsetLength), four.Mul(subsetArea)
 		oldSupersetLength, oldSupersetArea = two.Mul(oldSupersetLength), four.Mul(oldSupersetArea)
 
-		output := "---------------------------------------------------------------\n"
-		output += fmt.Sprintf("PHASE-1 Subset: %v\t\tlength %v\tarea %v\nSuperset\t# points %v,\tlength %v\tarea %v\n",
-			order, subsetLength.String(), subsetArea.String(),
+		output := "--------------------PHASE-1-------------------------------------------\n"
+		output += fmt.Sprintf("Subset: # points %v\t\tlength %v\tarea %v\nSuperset\t# points %v,\tlength %v\tarea %v\n",
+			len(subset), subsetLength.String(), subsetArea.String(),
 			len(superset), supersetLength.String(), supersetArea.String())
 		fmt.Println(output)
 
@@ -82,6 +82,8 @@ func main() {
 		// lastly set the new superset curve and continue
 		superset = newSuperset
 	}
+
+	return
 
 	// PHASE 2 - offset the superset curve
 	fmt.Println("---------------------------------------------PHASE-2----------------------------------------------------")
@@ -112,8 +114,8 @@ func main() {
 			len(superset), supersetLength.String(), supersetArea.String())
 		fmt.Println(output)
 
-		fmt.Printf("\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
-			offset.String(), superset.String(), newSuperset.String())
+		//fmt.Printf("\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
+		//offset.String(), superset.String(), newSuperset.String())
 
 		if err != nil {
 			panic(fmt.Sprintf("\nError: %v\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",

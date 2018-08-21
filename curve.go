@@ -335,12 +335,14 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 	}
 
 	// tack on any leftover end points
+	// BUG - check for duplicates
 	if c1I == int64(len(c1))-1 {
 		c1Out[c1OutI] = c1[int64(len(c1))-1]
 	}
 	if c2I == int64(len(c2))-1 {
 		c2Out[c2OutI] = c2[int64(len(c2))-1]
 	}
+
 	return c1Out, c2Out
 
 	//// add all those intercepts to each curve
@@ -410,13 +412,15 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 
 	superset = make(Curve)
 	c1Inter, c2Inter := AddIntercepts(c1, c2)
+	//fmt.Printf("\ndebug c2: %v\n", c2.String())
+	//fmt.Printf("\ndebug c1: %v\n", c1.String())
 	//fmt.Printf("\ndebug c1Inter: %v\n", c1Inter.String())
 	//fmt.Printf("\ndebug c2Inter: %v\n", c2Inter.String())
 	if len(c1Inter) < len(c1) {
-		panic("why1")
+		panic("why 1")
 	}
 	if len(c2Inter) < len(c2) {
-		panic("why1")
+		panic("why 2")
 	}
 
 	// counters for the curves
