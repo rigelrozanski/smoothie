@@ -10,8 +10,17 @@ type Point struct {
 	X, Y Dec
 }
 
+var zero, precErr, two, four Dec
+
+func init() {
+	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	zero = ZeroDec()
+	two = NewDec(2)
+	four = NewDec(4)
+}
+
 // curve as a bunch of straight lines between points
-type Curve map[int64]Points
+type Curve map[int64]Point
 
 // 2D function which constructs the curve
 type CurveFn func(x Dec) (y Dec)
@@ -19,7 +28,7 @@ type CurveFn func(x Dec) (y Dec)
 func NewRegularCurve(vertices int64, startPoint Point, xBoundMax Dec, fn CurveFn) Curve {
 
 	// create boring polygon
-	regularCurve := make(map[int64]Line)
+	regularCurve := make(Curve)
 	regularCurve[0] = startPoint
 
 	for i := int64(1); i <= vertices; i++ {
@@ -42,8 +51,8 @@ func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {
 	case ((x.Sub(pt.X)).Abs()).LT(precErr): // equal
 		return pt
 
-	case x.GT[pt.X]:
-		if lookupIndex == len(c)-1 {
+	case x.GT(pt.X):
+		if lookupIndex == int64(len(c))-1 {
 			panic("already at the largest point on the curve")
 		}
 		nextPt := c[lookupIndex+1]
@@ -52,7 +61,7 @@ func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {
 		} else {
 			return PointWithX(lookupIndex+1, x)
 		}
-	case x.LT[pt.X]:
+	case x.LT(pt.X):
 		if lookupIndex == 0 {
 			panic("already at the largest point on the curve")
 		}
@@ -74,71 +83,19 @@ func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {
 		start, end = c[lookupIndex], c[lookupIndex+1]
 	}
 
-	// y = mx +b
-	var m, b Dec
-	denom := end.X.Sub(start.X)
-	if denom.Equal(zero) {
-		m, b = ZeroDec(), start.Y
-	}
-	m := (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
-	b := start.Y.Sub(m.Mul(start.X))
-
-	return Point{x, (x.Mul(l.M)).Add(l.B)}
+	m, b := GetMB(start, end)
+	return Point{x, (x.Mul(m)).Add(b)}
 }
 
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxxxxx XXX
-// find the point on the curve (find on a linear line if not a vertex)
-// start by looking from the lookup index
-func (c Curve) PointWithY(lookupIndex int64, y Dec) Point {
-
-	pt := c[lookupIndex]
-	interpolateBackwards := false
-	switch {
-	case ((y.Sub(pt.Y)).Abs()).LT(precErr): // equal
-		return pt
-
-	case y.GT[pt.Y]:
-		if lookupIndex == len(c)-1 {
-			panic("already at the largest point on the curve")
-		}
-		nextPt := c[lookupIndex+1]
-		if nextPt.Y.GT(y) {
-			interpolateBackwards = false
-		} else {
-			return PointWithY(lookupIndex+1, y)
-		}
-	case y.LT[pt.Y]:
-		if lookupIndex == 0 {
-			panic("already at the largest point on the curve")
-		}
-		prevPt := c[lookupIndex-1]
-		if prevPt.Y.LT(y) {
-			interpolateBackwards = true
-		} else {
-			return PointWithY(lookupIndex-1, y)
-		}
-	default:
-		panic("why")
-	}
-
-	// perform interpolation
-	var start, end Point
-	if interpolateBackwards {
-		start, end = c[lookupIndex-1], c[lookupIndex]
-	} else {
-		start, end = c[lookupIndex], c[lookupIndex+1]
-	}
-
-	// y = mx +b
-	var m, b Dec
-	denom := end.Y.Sub(start.Y)
+// from y = mx +b
+func GetMB(start, end Point) (m, b Dec) {
+	denom := end.X.Sub(start.X)
 	if denom.Equal(zero) {
-		m, b = ZeroDec(), start.Y
+		return ZeroDec(), start.Y
 	}
-	m := (end.Y.Sub(start.Y)).Quo(end.Y.Sub(start.Y))
-	b := start.Y.Sub(m.Mul(start.Y))
-
-	return Point{(y.Sub(l.B)).Quo(l.M), y}
+	m = (end.Y.Sub(start.Y)).Quo(end.X.Sub(start.X))
+	b = start.Y.Sub(m.Mul(start.X))
+	return m, b
 }
 
 //_________________________________________________________________________________________
@@ -148,7 +105,7 @@ func (c Curve) PointWithY(lookupIndex int64, y Dec) Point {
 // area = (x2 - x1) * (y2 + y1)/2
 func (c Curve) GetLengthArea() (length, area Dec) {
 	length, area = ZeroDec(), ZeroDec()
-	for i := int64(1); i < len(c); i++ {
+	for i := int64(1); i < int64(len(c)); i++ {
 
 		// length calc
 		l1 := c[i].X.Sub(c[i-1].X)
@@ -176,61 +133,82 @@ func (c Curve) String() string {
 	return out
 }
 
-// shift all points uniformly along the x axis,
+// shift all points uniformly along the x axis, for thexpe starting points use a reflection
+// (which is correct for circles) TODO upgrade to use extra function points
 //
 // CONTRACT - the first and last points of the input curve (c) touch the curve function
 // CONTRACT - do not offset more than the first-line-order's width
-func (c Curve) OffsetCurve(xAxisForwardShift, startX, endY, xBoundMax Dec, firstLineOrder int64, fn CurveFn) Curve {
+func (c Curve) OffsetCurve(xAxisForwardShift, xBoundMax Dec, fn CurveFn) Curve {
 
-	// construct the first by working backwards from the first shifted point
-	firstLineWidth := xBoundMax.Quo(NewDec(firstLineOrder))
-	firstLineStartX := xAxisForwardShift.Sub(firstLineWidth) // should be negative
-	if firstLineStartX.GT(zero) {
-		msg := fmt.Sprintf("bad shift, cannot shift more than first line width\n\tfirstLineWidth\t%v\n\tfirstLineStartX\t%v\n",
-			firstLineWidth.String(), firstLineStartX.String())
-		panic(msg)
+	// TODO reflection more generic, assumes reflect along the x axis
+	// reflect the points along the Y axis
+	// by the amount which need to be shifted
+	reflected := make(Curve)
+	for i := int64(0); i < int64(len(c))-1; i++ { // should not reach the end
+		if c[i].X.LT(xAxisForwardShift) {
+			reflected[i] = Point{c[i].X.Neg(), c[i].Y}
+			continue
+		}
+		if ((c[i].X.Sub(xAxisForwardShift)).Abs()).LT(precErr) { // equal
+			reflected[i] = Point{c[i].X.Neg(), c[i].Y}
+			break
+		}
+
+		// MUST be the final point - interpolate
+		m, b := GetMB(c[i-1], c[i])
+		reflected[i] = Point{c[i].X.Neg(), (c[i].X.Mul(m)).Add(b)}
+		break
 	}
-	firstLineStartPt := Point{firstLineStartX, fn(firstLineStartX)}
 
-	firstLineEndX := c[0].Start.X.Add(xAxisForwardShift)
-	firstLineEndPt := Point{firstLineEndX, fn(firstLineEndX)}
-	firstLine := NewLine(firstLineStartPt, firstLineEndPt)
+	// add the reflected points to a new curve (in reverse order)
+	combined := make(Curve)
+	combinedI := int64(0)
+	for i := int64(len(reflected)) - 1; i >= 0; i-- { // should not reach the end
+		combined[combinedI] = reflected[i]
+		combinedI++
+	}
+	for i := int64(0); i < int64(len(c)); i++ { // now add the rest of the curve
+		combined[combinedI] = c[i]
+		combinedI++
+	}
 
-	// trim the first line
-	firstLine = NewLine(firstLine.PointWithX(startX), firstLineEndPt)
-
-	offsetCurve := make(map[int64]Line)
-	offsetCurve[0] = firstLine
-	for i := 0; i < len(c); i++ {
-		line := c[int64(i)]
-		startX := line.Start.X.Add(xAxisForwardShift)
-		startShiftY := fn(line.Start.X).Sub(fn(startX))
-		startY := line.Start.Y.Sub(startShiftY)
-		startPt := Point{startX, startY}
-
-		endX := line.End.X.Add(xAxisForwardShift)
+	// now generate the offset with the provided points
+	offsetCurve := make(Curve)
+	offsetCurveI := int64(0)
+	for i := int64(0); i < len(combined); i++ {
+		pt := combined[i]
+		newX := pt.X.Add(xAxisForwardShift)
 
 		// TODO factor out circle specific logic, should somehow be in the function
-		neg := false
-		if endX.GT(xBoundMax) {
-			endX = xBoundMax.Sub(endX.Sub(xBoundMax)) // 1.1 -> 0.9
-			neg = true
+		// this assumes the circle function and requires it to trim the final point
+		negTrim := false
+		if newX.GT(xBoundMax) {
+			newX = xBoundMax.Sub(newX.Sub(xBoundMax)) // 1.1 -> 0.9
+			negTrim = true
 		}
 
-		endShiftY := fn(line.End.X).Sub(fn(endX))
-		endY := line.End.Y.Sub(endShiftY)
+		shiftY := fn(pt.X).Sub(fn(newX))
+		newY := pt.Y.Sub(shiftY)
 
-		endPt := Point{endX, endY}
-		if neg { // TODO factor out for circle
-			endPt = Point{endX, endY.Neg()}
+		if !negTrim {
+			offsetCurve[offsetCurveI] = Point{newX, newY}
+
+		} else { // if negative than must be the final point
+
+			// trim the final point
+			untrimmedPt := Point{newX, newY.Neg()}
+			m, b := GetMB(offsetCurve[offsetCurveI-1], untrimmedPt)
+
+			finalY := zero
+			if !m.Equal(zero) {
+				offsetCurve[offsetCurveI] = Point{(finalY.Sub(b)).Quo(m), finalY}
+			} else {
+				offsetCurve[offsetCurveI] = Point{newX, finalY} // vertical line
+			}
+			break
 		}
-
-		offsetCurve[int64(i+1)] = NewLine(startPt, endPt)
+		offsetCurveI++
 	}
-
-	// trim the last line
-	j := int64(len(offsetCurve)) - 1
-	offsetCurve[j] = NewLine(offsetCurve[j].Start, offsetCurve[j].PointWithY(endY))
 
 	return offsetCurve
 }
