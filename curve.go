@@ -266,15 +266,38 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 			} else {
 				intercept = Point{(y.Sub(b2)).Quo(m2), y}
 			}
+			//fmt.Printf("debug early intercept: %v\n", intercept)
+
+			lXLine, l2XLine, lYLine, l2YLine := false, false, false, false
+			if ((startC1.X.Sub(endC1.X)).Abs()).LT(precErr) {
+				lXLine = true
+			}
+			if ((startC2.X.Sub(endC2.X)).Abs()).LT(precErr) {
+				l2XLine = true
+			}
+			if ((startC1.Y.Sub(endC1.Y)).Abs()).LT(precErr) {
+				lYLine = true
+			}
+			if ((startC2.Y.Sub(endC2.Y)).Abs()).LT(precErr) {
+				l2YLine = true
+			}
 
 			// valid range if X is bigger than the maximum startX
 			//   and less than the minimum endX
-			if intercept.X.GT(MaxDec(startC1.X, startC2.X)) &&
-				intercept.X.LT(MinDec(endC1.X, endC2.X)) &&
-				!(((intercept.X.Sub(startC1.X)).Abs()).LT(precErr) ||
-					((intercept.X.Sub(endC1.X)).Abs()).LT(precErr) ||
-					((intercept.X.Sub(startC2.X)).Abs()).LT(precErr) ||
-					((intercept.X.Sub(endC2.X)).Abs()).LT(precErr)) {
+			//if intercept.X.GT(MaxDec(startC1.X, startC2.X)) &&
+			//intercept.X.LT(MinDec(endC1.X, endC2.X)) &&
+			//!(((intercept.X.Sub(startC1.X)).Abs()).LT(precErr) ||
+			//((intercept.X.Sub(endC1.X)).Abs()).LT(precErr) ||
+			//((intercept.X.Sub(startC2.X)).Abs()).LT(precErr) ||
+			//((intercept.X.Sub(endC2.X)).Abs()).LT(precErr)) {
+			if (intercept.X.GT(MinDec(startC1.X, endC1.X)) || lXLine) &&
+				(intercept.X.LT(MaxDec(startC1.X, endC1.X)) || lXLine) &&
+				(intercept.X.GT(MinDec(startC2.X, endC2.X)) || l2XLine) &&
+				(intercept.X.LT(MaxDec(startC2.X, endC2.X)) || l2XLine) &&
+				(intercept.Y.LT(MaxDec(startC1.Y, endC1.Y)) || lYLine) &&
+				(intercept.Y.GT(MinDec(startC1.Y, endC1.Y)) || lYLine) &&
+				(intercept.Y.LT(MaxDec(startC2.Y, endC2.Y)) || l2YLine) &&
+				(intercept.Y.GT(MinDec(startC2.Y, endC2.Y)) || l2YLine) {
 
 				intercepts[interceptI] = intercept
 				interceptI++
