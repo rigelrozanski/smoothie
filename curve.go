@@ -226,7 +226,21 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 	startC1, startC2 := c1[0], c2[0]
 	c1I, c2I := int64(1), int64(1)
 	endC1, endC2 := c1[c1I], c2[c2I]
+	fmt.Printf("debug c1: %v\n", c1.String())
+	fmt.Printf("debug c2: %v\n", c2.String())
+	fmt.Printf("debug len(c1): %v\n", len(c1))
+	fmt.Printf("debug len(c2): %v\n", len(c2))
 	for {
+		if c1I >= int64(len(c1)) || c2I >= int64(len(c2)) {
+			break
+		}
+		fmt.Printf("debug c2I: %v\n", c2I)
+		fmt.Printf("debug c1I: %v\n", c1I)
+
+		fmt.Printf("debug startC1: %v\n", startC1)
+		fmt.Printf("debug endC1: %v\n", endC1)
+		fmt.Printf("debug startC2: %v\n", startC2)
+		fmt.Printf("debug endC2: %v\n", endC2)
 		if startC1.X.GTE(endC2.X) {
 			c2I++
 			startC2, endC2 = c2[c2I-1], c2[c2I]
@@ -237,6 +251,7 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 			startC1, endC1 = c1[c1I-1], c1[c1I]
 			continue
 		}
+		fmt.Println("asdgasdgasdg")
 
 		m1, b1 := GetMB(startC1, endC1)
 		m2, b2 := GetMB(startC2, endC2)
@@ -244,7 +259,7 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 		//  y  = (b2 m1 - b1 m2)/(m1 - m2)
 		num := (b2.Mul(m1)).Sub(b1.Mul(m2))
 		denom := m1.Sub(m2)
-		if denom.Equal(zero) {
+		if !denom.Equal(zero) {
 			y := num.Quo(denom)
 			var intercept Point
 			if !m1.Equal(zero) {
@@ -263,8 +278,10 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 		}
 
 		if endC1.X.LT(endC2.X) {
+			c1I++
 			startC1, endC1 = c1[c1I-1], c1[c1I]
 		} else {
+			c2I++
 			startC2, endC2 = c2[c2I-1], c2[c2I]
 		}
 	}
@@ -273,11 +290,16 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 	c1Out, c2Out = make(Curve), make(Curve)
 	c1OutI, c2OutI := int64(0), int64(0)
 	maxInterceptI := int64(len(intercepts))
+	fmt.Printf("debug maxInterceptI: %v\n", maxInterceptI)
 
 	// curve 1
 	interceptI = int64(0)
 	c1I = int64(0)
 	for {
+		if interceptI >= maxInterceptI {
+			break
+		}
+
 		intercept := intercepts[interceptI]
 		cPt := c1[c1I]
 		if intercept.X.LT(cPt.X) {
@@ -289,9 +311,6 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 			c1OutI++
 			c1I++
 		}
-		if interceptI > maxInterceptI {
-			break
-		}
 	}
 	for ; c1I < int64(len(c1)); c1I++ { // any remaining points
 		c1Out[c1OutI] = c1[c1I]
@@ -301,6 +320,10 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 	interceptI = int64(0)
 	c2I = int64(0)
 	for {
+		if interceptI >= maxInterceptI {
+			break
+		}
+
 		intercept := intercepts[interceptI]
 		cPt := c2[c2I]
 		if intercept.X.LT(cPt.X) {
@@ -311,9 +334,6 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 			c2Out[c2OutI] = cPt
 			c2OutI++
 			c2I++
-		}
-		if interceptI > maxInterceptI {
-			break
 		}
 	}
 	for ; c2I < int64(len(c2)); c2I++ { // any remaining points
