@@ -20,7 +20,7 @@ import (
 )
 
 // nolint
-const Precision = 500
+const Precision = 20
 
 var startOrder = int64(100) // number of vertex in first curve estimation
 var numberOfOffsets = startOrder

@@ -32,7 +32,7 @@ func init() {
 	for i := 0; i <= Precision; i++ {
 		precisionMultipliers[i] = calcPrecisionMultiplier(int64(i))
 	}
-	precErr = NewDecWithPrec(3, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	precErr = NewDecWithPrec(1, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
 	zero = ZeroDec()
 	two = NewDec(2)
 	four = NewDec(4)
