@@ -10,6 +10,10 @@ type Point struct {
 	X, Y Dec
 }
 
+func (p Point) String() string {
+	return fmt.Sprintf("{%v, %v}", p.X.String(), p.Y.String())
+}
+
 // curve as a bunch of straight lines between points
 type Curve map[int64]Point
 
@@ -150,15 +154,16 @@ func (c Curve) OffsetCurve(xAxisForwardShift, xBoundMax Dec, fn CurveFn) Curve {
 		}
 
 		// MUST be the final point - interpolate
+		x := xAxisForwardShift
 		m, b := GetMB(c[i-1], c[i])
-		reflected[i] = Point{c[i].X.Neg(), (c[i].X.Mul(m)).Add(b)}
+		reflected[i] = Point{x.Neg(), (x.Mul(m)).Add(b)}
 		break
 	}
 
 	// add the reflected points to a new curve (in reverse order)
 	combined := make(Curve)
 	combinedI := int64(0)
-	for i := int64(len(reflected)) - 1; i >= 0; i-- { // should not reach the end
+	for i := int64(len(reflected)) - 1; i > 0; i-- { // skip the final reflection point
 		combined[combinedI] = reflected[i]
 		combinedI++
 	}
@@ -210,36 +215,145 @@ func (c Curve) OffsetCurve(xAxisForwardShift, xBoundMax Dec, fn CurveFn) Curve {
 
 //_________________________________________________________________________________________________________________
 
+// add all the intercepting points to each curve
+// TODO optimize this, I bet we can do everything in one step
+func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
+
+	// gather all the intercepts points to a curve
+	intercepts := make(Curve)
+	interceptI := int64(0)
+
+	startC1, startC2 := c1[0], c2[0]
+	c1I, c2I := int64(1), int64(1)
+	endC1, endC2 := c1[c1I], c2[c2I]
+	for {
+		if startC1.X.GTE(endC2.X) {
+			c2I++
+			startC2, endC2 = c2[c2I-1], c2[c2I]
+			continue
+		}
+		if startC2.X.GTE(endC1.X) {
+			c1I++
+			startC1, endC1 = c1[c1I-1], c1[c1I]
+			continue
+		}
+
+		m1, b1 := GetMB(startC1, endC1)
+		m2, b2 := GetMB(startC2, endC2)
+
+		//  y  = (b2 m1 - b1 m2)/(m1 - m2)
+		num := (b2.Mul(m1)).Sub(b1.Mul(m2))
+		denom := m1.Sub(m2)
+		if denom.Equal(zero) {
+			y := num.Quo(denom)
+			var intercept Point
+			if !m1.Equal(zero) {
+				intercept = Point{(y.Sub(b1)).Quo(m1), y}
+			} else {
+				intercept = Point{(y.Sub(b2)).Quo(m2), y}
+			}
+
+			// valid range if X is bigger than the maximum startX
+			//   and less than the minimum endX
+			if intercept.X.GT(MaxDec(startC1.X, startC2.X)) &&
+				intercept.X.LT(MinDec(endC1.X, endC2.X)) {
+				intercepts[interceptI] = intercept
+				interceptI++
+			}
+		}
+
+		if endC1.X.LT(endC2.X) {
+			startC1, endC1 = c1[c1I-1], c1[c1I]
+		} else {
+			startC2, endC2 = c2[c2I-1], c2[c2I]
+		}
+	}
+
+	// add all those intercepts to each curve
+	c1Out, c2Out = make(Curve), make(Curve)
+	c1OutI, c2OutI := int64(0), int64(0)
+	maxInterceptI := int64(len(intercepts))
+
+	// curve 1
+	interceptI = int64(0)
+	c1I = int64(0)
+	for {
+		intercept := intercepts[interceptI]
+		cPt := c1[c1I]
+		if intercept.X.LT(cPt.X) {
+			c1Out[c1OutI] = intercept
+			c1OutI++
+			interceptI++
+		} else {
+			c1Out[c1OutI] = cPt
+			c1OutI++
+			c1I++
+		}
+		if interceptI > maxInterceptI {
+			break
+		}
+	}
+	for ; c1I < int64(len(c1)); c1I++ { // any remaining points
+		c1Out[c1OutI] = c1[c1I]
+	}
+
+	// curve 2
+	interceptI = int64(0)
+	c2I = int64(0)
+	for {
+		intercept := intercepts[interceptI]
+		cPt := c2[c2I]
+		if intercept.X.LT(cPt.X) {
+			c2Out[c2OutI] = intercept
+			c2OutI++
+			interceptI++
+		} else {
+			c2Out[c2OutI] = cPt
+			c2OutI++
+			c2I++
+		}
+		if interceptI > maxInterceptI {
+			break
+		}
+	}
+	for ; c2I < int64(len(c2)); c2I++ { // any remaining points
+		c2Out[c2OutI] = c2[c2I]
+	}
+
+	return c1Out, c2Out
+}
+
 // get the superset curve of two curves
 func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 	supersetLength, supersetArea, c1Length, c1Area, c2Length, c2Area Dec, err error) {
 
 	superset = make(Curve)
+	c1Inter, c2Inter := AddIntercepts(c1, c2)
 
 	// counters for the curves
 	supersetI, c1I, c2I := int64(0), int64(0), int64(0)
 
 	for {
 		var newPt Point
-		c1Pt, c2Pt := c1[c1I], c2[c2I]
-		fmt.Printf("debug c1Pt: %v\n", c1Pt)
-		fmt.Printf("debug c2Pt: %v\n", c2Pt)
+		c1Pt, c2Pt := c1Inter[c1I], c2Inter[c2I]
+		//fmt.Printf("debug c1Pt: %v\n", c1Pt.String())
+		//fmt.Printf("debug c2Pt: %v\n", c2Pt.String())
 
 		switch {
 		case ((c1Pt.X.Sub(c2Pt.X)).Abs()).LT(precErr): // equal
-			fmt.Println("hit1")
+			//fmt.Println("hit1")
 
 			newPt = Point{c1Pt.X, MaxDec(c1Pt.Y, c2Pt.Y)} // TODO don't use MAX (only applies to circle)
 			c1I++
 			c2I++
 		case c1Pt.X.LT(c2Pt.X): // pt1 > pt2
-			fmt.Println("hit2")
-			c2Interpolated := c2.PointWithX(c2I, c1Pt.X)
+			//fmt.Println("hit2")
+			c2Interpolated := c2Inter.PointWithX(c2I, c1Pt.X)
 			newPt = Point{c1Pt.X, MaxDec(c1Pt.Y, c2Interpolated.Y)}
 			c1I++
 		case c2Pt.X.LT(c1Pt.X): // pt1 > pt2
-			fmt.Println("hit3")
-			c1Interpolated := c1.PointWithX(c1I, c2Pt.X)
+			//fmt.Println("hit3")
+			c1Interpolated := c1Inter.PointWithX(c1I, c2Pt.X)
 			newPt = Point{c2Pt.X, MaxDec(c2Pt.Y, c1Interpolated.Y)}
 			c2I++
 		default:
@@ -249,14 +363,14 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 		superset[supersetI] = newPt
 		supersetI++
 
-		if c1I >= int64(len(c1)) || c2I >= int64(len(c2)) {
+		if c1I >= int64(len(c1Inter)) || c2I >= int64(len(c2Inter)) {
 			break
 		}
 	}
 
 	supersetLength, supersetArea = superset.GetLengthArea()
-	c1Length, c1Area = c1.GetLengthArea()
-	c2Length, c2Area = c2.GetLengthArea()
+	c1Length, c1Area = c1Inter.GetLengthArea()
+	c2Length, c2Area = c2Inter.GetLengthArea()
 
 	///////////////////////////////////////////////////////////////////////////////////
 	// SANITY

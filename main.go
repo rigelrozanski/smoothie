@@ -108,8 +108,8 @@ func main() {
 			len(superset), supersetLength.String(), supersetArea.String())
 		fmt.Println(output)
 
-		fmt.Printf("\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
-			offset.String(), superset.String(), newSuperset.String())
+		//fmt.Printf("\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
+		//offset.String(), superset.String(), newSuperset.String())
 
 		if err != nil {
 			panic(fmt.Sprintf("\nError: %v\n\noffset =Line[\n%v];\noldsuperset =Line[\n%v];\nsuperset =Line[\n%v];\n",
