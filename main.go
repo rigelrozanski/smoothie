@@ -22,7 +22,7 @@ import (
 // nolint
 const Precision = 15
 
-var startOrder = int64(2) // number of vertex in first curve estimation
+var startOrder = int64(20) // number of vertex in first curve estimation
 var numberOfOffsets = startOrder
 
 func circleFn(x Dec) (y Dec) {
