@@ -219,6 +219,9 @@ func (c Curve) OffsetCurve(xAxisForwardShift, xBoundMax Dec, fn CurveFn) Curve {
 // TODO optimize this, I bet we can do everything in one step
 func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 
+	c1Out, c2Out = make(Curve), make(Curve)
+	c1OutI, c2OutI := int64(0), int64(0)
+
 	// gather all the intercepts points to a curve
 	intercepts := make(Curve)
 	interceptI := int64(0)
@@ -226,6 +229,11 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 	startC1, startC2 := c1[0], c2[0]
 	c1I, c2I := int64(1), int64(1)
 	endC1, endC2 := c1[c1I], c2[c2I]
+
+	c1Out[c1OutI] = startC1
+	c1OutI++
+	c2Out[c2OutI] = startC2
+	c2OutI++
 	//fmt.Printf("debug c1: %v\n", c1.String())
 	//fmt.Printf("debug c2: %v\n", c2.String())
 	//fmt.Printf("debug len(c1): %v\n", len(c1))
@@ -244,11 +252,15 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 		if startC1.X.GTE(endC2.X) {
 			c2I++
 			startC2, endC2 = c2[c2I-1], c2[c2I]
+			c2Out[c2OutI] = startC2
+			c2OutI++
 			continue
 		}
 		if startC2.X.GTE(endC1.X) {
 			c1I++
 			startC1, endC1 = c1[c1I-1], c1[c1I]
+			c1Out[c1OutI] = startC1
+			c1OutI++
 			continue
 		}
 
@@ -301,6 +313,10 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 
 				intercepts[interceptI] = intercept
 				interceptI++
+				c1Out[c1OutI] = intercept
+				c1OutI++
+				c2Out[c2OutI] = intercept
+				c2OutI++
 				//fmt.Printf("debug intercept: %v\n", intercept)
 			}
 		}
@@ -308,73 +324,84 @@ func AddIntercepts(c1, c2 Curve) (c1Out, c2Out Curve) {
 		if endC1.X.LT(endC2.X) {
 			c1I++
 			startC1, endC1 = c1[c1I-1], c1[c1I]
+			c1Out[c1OutI] = startC1
+			c1OutI++
 		} else {
 			c2I++
 			startC2, endC2 = c2[c2I-1], c2[c2I]
+			c2Out[c2OutI] = startC2
+			c2OutI++
 		}
 	}
 
-	// add all those intercepts to each curve
-	c1Out, c2Out = make(Curve), make(Curve)
-	c1OutI, c2OutI := int64(0), int64(0)
-	maxInterceptI := int64(len(intercepts))
-	//fmt.Printf("debug maxInterceptI: %v\n", maxInterceptI)
-
-	// curve 1
-	interceptI = int64(0)
-	c1I = int64(0)
-	//fmt.Printf("debug c1: %v\n", c1.String())
-	for {
-		if interceptI >= maxInterceptI {
-			break
-		}
-
-		intercept := intercepts[interceptI]
-		cPt := c1[c1I]
-		if intercept.X.LT(cPt.X) {
-			c1Out[c1OutI] = intercept
-			interceptI++
-		} else {
-			c1Out[c1OutI] = cPt
-			c1I++
-		}
-		c1OutI++
+	// tack on any leftover end points
+	if c1I == int64(len(c1))-1 {
+		c1Out[c1OutI] = c1[int64(len(c1))-1]
 	}
-	for ; c1I < int64(len(c1)); c1I++ { // any remaining points
-		c1Out[c1OutI] = c1[c1I]
-		c1OutI++
+	if c2I == int64(len(c2))-1 {
+		c2Out[c2OutI] = c2[int64(len(c2))-1]
 	}
-	//fmt.Printf("debug len(c1Out): %v\n", len(c1Out))
-	//fmt.Printf("debug c1Out: %v\n", c1Out)
-
-	// curve 2
-	interceptI = int64(0)
-	c2I = int64(0)
-	//fmt.Printf("debug c2: %v\n", c2.String())
-	for {
-		if interceptI >= maxInterceptI {
-			break
-		}
-
-		intercept := intercepts[interceptI]
-		cPt := c2[c2I]
-		if intercept.X.LT(cPt.X) {
-			c2Out[c2OutI] = intercept
-			interceptI++
-		} else {
-			c2Out[c2OutI] = cPt
-			c2I++
-		}
-		c2OutI++
-	}
-	for ; c2I < int64(len(c2)); c2I++ { // any remaining points
-		c2Out[c2OutI] = c2[c2I]
-		c2OutI++
-	}
-	//fmt.Printf("debug len(c2Out): %v\n", len(c2Out))
-	//fmt.Printf("debug c2Out: %v\n", c2Out)
-
 	return c1Out, c2Out
+
+	//// add all those intercepts to each curve
+	//maxInterceptI := int64(len(intercepts))
+	////fmt.Printf("debug maxInterceptI: %v\n", maxInterceptI)
+
+	//// curve 1
+	//interceptI = int64(0)
+	//c1I = int64(0)
+	////fmt.Printf("debug c1: %v\n", c1.String())
+	//for {
+	//if interceptI >= maxInterceptI {
+	//break
+	//}
+
+	//intercept := intercepts[interceptI]
+	//cPt := c1[c1I]
+	//if intercept.X.LT(cPt.X) {
+	//c1Out[c1OutI] = intercept
+	//interceptI++
+	//} else {
+	//c1Out[c1OutI] = cPt
+	//c1I++
+	//}
+	//c1OutI++
+	//}
+	//for ; c1I < int64(len(c1)); c1I++ { // any remaining points
+	//c1Out[c1OutI] = c1[c1I]
+	//c1OutI++
+	//}
+	////fmt.Printf("debug len(c1Out): %v\n", len(c1Out))
+	////fmt.Printf("debug c1Out: %v\n", c1Out)
+
+	//// curve 2
+	//interceptI = int64(0)
+	//c2I = int64(0)
+	////fmt.Printf("debug c2: %v\n", c2.String())
+	//for {
+	//if interceptI >= maxInterceptI {
+	//break
+	//}
+
+	//intercept := intercepts[interceptI]
+	//cPt := c2[c2I]
+	//if intercept.X.LT(cPt.X) {
+	//c2Out[c2OutI] = intercept
+	//interceptI++
+	//} else {
+	//c2Out[c2OutI] = cPt
+	//c2I++
+	//}
+	//c2OutI++
+	//}
+	//for ; c2I < int64(len(c2)); c2I++ { // any remaining points
+	//c2Out[c2OutI] = c2[c2I]
+	//c2OutI++
+	//}
+	////fmt.Printf("debug len(c2Out): %v\n", len(c2Out))
+	////fmt.Printf("debug c2Out: %v\n", c2Out)
+
+	//return c1Out, c2Out
 }
 
 // get the superset curve of two curves
