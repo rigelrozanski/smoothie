@@ -36,6 +36,25 @@ func NewRegularCurve(vertices int64, startPoint Point, xBoundMax Dec, fn CurveFn
 	return regularCurve
 }
 
+//// normalized by line length
+//// x2 = 1/2 (2 x1 - L^2 x1 + Sqrt[4 L^2 - L^4 - 4 L^2 x1^2 + L^4 x1^2])
+//// x2 = 1/2 (2 x1 - L^2 x1 - Sqrt[4 L^2 - L^4 - 4 L^2 x1^2 + L^4 x1^2])
+//func NewRegularCurve2(vertices int64, startPoint Point, xBoundMax Dec) Curve {
+
+//// create boring polygon
+//regularCurve := make(Curve)
+//regularCurve[0] = startPoint
+
+//for i := int64(1); i <= vertices; i++ {
+//x := (xBoundMax.Mul(NewDec(i))).Quo(NewDec(vertices))
+//if x.GT(xBoundMax) || (xBoundMax.Sub(x)).LT(precErr) { // precision correction
+//x = xBoundMax
+//}
+//regularCurve[i] = Point{x, fn(x)}
+//}
+//return regularCurve
+//}
+
 // find the point on the curve (find on a linear line if not a vertex)
 // start by looking from the lookup index
 func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {

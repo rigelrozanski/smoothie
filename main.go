@@ -20,10 +20,10 @@ import (
 )
 
 // nolint
-const Precision = 25
+const Precision = 15
 
-var startOrder = int64(30) // number of vertex in first curve estimation
-var numberOfOffsets = startOrder
+var startOrder = int64(1000) //number of vertex in first curve estimation
+var numberOfOffsets = int64(100)
 
 func circleFn(x Dec) (y Dec) {
 	inter1 := x.Mul(x)
@@ -42,6 +42,7 @@ func main() {
 	superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
 	order := startOrder + 1
 	for ; order < startOrder*2; order++ {
+		break // no supersets only rotations
 		//for ; true; order++ {
 
 		// get the superset curve of two curves
@@ -81,6 +82,7 @@ func main() {
 
 		// lastly set the new superset curve and continue
 		superset = newSuperset
+
 	}
 
 	//return
@@ -88,9 +90,9 @@ func main() {
 	// PHASE 2 - offset the superset curve
 	fmt.Println("---------------------------------------------PHASE-2----------------------------------------------------")
 	//fmt.Printf("debug startOrder: %v\n", startOrder)
-	//maxOffset := xBoundMax.Quo(NewDec(startOrder))
-	finalOrder := startOrder * 2 * 2
-	maxOffset := xBoundMax.Quo(NewDec(finalOrder))
+	maxOffset := xBoundMax.Quo(NewDec(startOrder))
+	//finalOrder := startOrder * 2 * 2
+	//maxOffset := xBoundMax.Quo(NewDec(finalOrder))
 	phase1Superset := superset
 	for offsetI := int64(1); offsetI <= numberOfOffsets; offsetI++ {
 		output := "---------------------------------------------------------------\n"
