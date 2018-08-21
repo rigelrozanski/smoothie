@@ -10,15 +10,6 @@ type Point struct {
 	X, Y Dec
 }
 
-var zero, precErr, two, four Dec
-
-func init() {
-	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
-	zero = ZeroDec()
-	two = NewDec(2)
-	four = NewDec(4)
-}
-
 // curve as a bunch of straight lines between points
 type Curve map[int64]Point
 
@@ -59,7 +50,7 @@ func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {
 		if nextPt.X.GT(x) {
 			interpolateBackwards = false
 		} else {
-			return PointWithX(lookupIndex+1, x)
+			return c.PointWithX(lookupIndex+1, x)
 		}
 	case x.LT(pt.X):
 		if lookupIndex == 0 {
@@ -69,7 +60,7 @@ func (c Curve) PointWithX(lookupIndex int64, x Dec) Point {
 		if prevPt.X.LT(x) {
 			interpolateBackwards = true
 		} else {
-			return PointWithX(lookupIndex-1, x)
+			return c.PointWithX(lookupIndex-1, x)
 		}
 	default:
 		panic("why")
@@ -175,7 +166,7 @@ func (c Curve) OffsetCurve(xAxisForwardShift, xBoundMax Dec, fn CurveFn) Curve {
 	// now generate the offset with the provided points
 	offsetCurve := make(Curve)
 	offsetCurveI := int64(0)
-	for i := int64(0); i < len(combined); i++ {
+	for i := int64(0); i < int64(len(combined)); i++ {
 		pt := combined[i]
 		newX := pt.X.Add(xAxisForwardShift)
 
@@ -224,24 +215,22 @@ func SupersetCurve(c1, c2 Curve, fn CurveFn) (superset Curve,
 	// counters for the curves
 	supersetI, c1I, c2I := int64(0), int64(0), int64(0)
 
-	c1Pt, c2Pt := c1[c1I], c2[c2I]
-
 	for {
 		var newPt Point
 		c1Pt, c2Pt := c1[c1I], c2[c2I]
 
 		switch {
 		case ((c1Pt.X.Sub(c1Pt.X)).Abs()).LT(precErr): // equal
-			newPt := Point{c1Pt.X, MaxDec{c1Pt.Y, c2Pt.Y}} // TODO don't use MAX (only applies to circle)
+			newPt = Point{c1Pt.X, MaxDec(c1Pt.Y, c2Pt.Y)} // TODO don't use MAX (only applies to circle)
 			c1I++
 			c2I++
 		case c1Pt.X.LT(c2Pt.X): // pt1 > pt2
-			c2Interpolated := c2Pt.PointWithX(c1Pt.X)
-			newPt := Point{c1Pt.X, MaxDec{c1Pt.Y, c2Interpolated.Y}}
+			c2Interpolated := c2.PointWithX(c2I, c1Pt.X)
+			newPt = Point{c1Pt.X, MaxDec(c1Pt.Y, c2Interpolated.Y)}
 			c1I++
 		case c2Pt.X.LT(c1Pt.X): // pt1 > pt2
-			c1Interpolated := c1Pt.PointWithX(c2Pt.X)
-			newPt := Point{c2Pt.X, MaxDec{c2Pt.Y, c1Interpolated.Y}}
+			c1Interpolated := c1.PointWithX(c1I, c2Pt.X)
+			newPt = Point{c2Pt.X, MaxDec(c2Pt.Y, c1Interpolated.Y)}
 			c2I++
 		default:
 			panic("why")

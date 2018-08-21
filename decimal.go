@@ -24,12 +24,18 @@ var (
 	tenInt               = big.NewInt(10)
 )
 
+var zero, precErr, two, four Dec
+
 // Set precision multipliers
 func init() {
 	precisionMultipliers = make([]*big.Int, Precision+1)
 	for i := 0; i <= Precision; i++ {
 		precisionMultipliers[i] = calcPrecisionMultiplier(int64(i))
 	}
+	precErr = NewDecWithPrec(2, Precision) // XXX NEED A BETTER WAY OF DEALING WITH PRECISION LOSSES - maybe switch to big rational
+	zero = ZeroDec()
+	two = NewDec(2)
+	four = NewDec(4)
 }
 
 func precisionInt() *big.Int {

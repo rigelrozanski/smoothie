@@ -64,7 +64,7 @@ func main() {
 		// NOTE the superset length can decrease in this process
 		if err != nil {
 			switch {
-			case !(newSuperset[int64(len(newSuperset)-1)].End.X).Equal(OneDec()):
+			case !(newSuperset[int64(len(newSuperset)-1)].X).Equal(OneDec()):
 				err = errors.New("non-offset newSuperset doesn't end at {1,0}")
 			case (supersetLength).LT(subsetLength):
 				err = errors.New("subset > superset length")
@@ -91,7 +91,7 @@ func main() {
 		offsetWidth := (maxOffset.Mul(NewDec(offsetI))).Quo(NewDec(numberOfOffsets))
 		//fmt.Printf("debug maxOffset: %v\n", maxOffset.String())
 		//fmt.Printf("debug offsetWidth: %v\n", offsetWidth.String())
-		offset := phase1Superset.OffsetCurve(offsetWidth, zero, zero, xBoundMax, finalOrder, circleFn)
+		offset := phase1Superset.OffsetCurve(offsetWidth, xBoundMax, circleFn)
 
 		newSuperset, supersetLength, supersetArea, offsetLength, offsetArea, oldSupersetLength, oldSupersetArea, err := SupersetCurve(superset, offset, circleFn)
 
