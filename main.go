@@ -23,7 +23,7 @@ import (
 // nolint
 const Precision = 15
 
-var startOrder = int64(28) //0number of vertex in first curve estimation
+var startOrder = int64(1000) //0number of vertex in first curve estimation
 var numberOfOffsets = int64(20)
 
 func circleFn(x Dec) (y Dec) {
@@ -62,18 +62,17 @@ func main() {
 
 	// PHASE 1: construct the non-offset superset of different order curves
 	fmt.Println("---------------------------------------------PHASE-1----------------------------------------------------")
-	//superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
-	//order := startOrder + 1
-	//for ; order < startOrder*2; order++ {
-	//break // no supersets only rotations
-	//for ; true; order++ {
+	superset := NewRegularCurve(startOrder, startPt, xBoundMax, circleFn)
+	order := startOrder + 1
+	for ; order < startOrder*2; order++ {
+		//break // no supersets only rotations
 
-	//primes only
-	primes := SieveOfEratosthenes(300)
-	superset := NewRegularCurve(primes[0], startPt, xBoundMax, circleFn)
-	for j := 1; j < len(primes); j++ {
-		order := primes[j]
-		fmt.Printf("debug order: %v\n", order)
+		//primes only
+		//primes := SieveOfEratosthenes(300)
+		//superset := NewRegularCurve(primes[0], startPt, xBoundMax, circleFn)
+		//for j := 1; j < len(primes); j++ {
+		//order := primes[j]
+		//fmt.Printf("debug order: %v\n", order)
 
 		// get the superset curve of two curves
 		subset := NewRegularCurve(order, startPt, xBoundMax, circleFn)
@@ -115,7 +114,7 @@ func main() {
 
 	}
 
-	//return
+	return
 
 	// PHASE 2 - offset the superset curve
 	fmt.Println("---------------------------------------------PHASE-2----------------------------------------------------")
